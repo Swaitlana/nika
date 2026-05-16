@@ -39,13 +39,6 @@ class SenderResourceContentionBase:
         )
         system_logger.info(f"Injected TCP slow sender issue on host {self.faulty_devices[0]}")
 
-    def recover_fault(self):
-        self.injector.recover_stress_all(
-            host_name=self.faulty_devices[0],
-        )
-        system_logger.info(f"Recovered TCP slow sender issue on host {self.faulty_devices[0]}")
-
-
 class SenderResourceContentionDetection(SenderResourceContentionBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=SenderResourceContentionBase.root_cause_category,
@@ -114,19 +107,6 @@ class SenderApplicationDelayBase:
         )
         system_logger.info(f"Injected TCP sender application delay issue on host {self.faulty_devices[0]}")
 
-    def recover_fault(self):
-        # restore original web_server.py
-        self.kathara_api.exec_cmd(
-            host_name=self.faulty_devices[0],
-            command="mv web_server.py.bak web_server.py",
-        )
-        self.kathara_api.exec_cmd(
-            host_name=self.faulty_devices[0],
-            command="systemctl restart web_server.service",
-        )
-        system_logger.info(f"Recovered TCP sender resource contention issue on host {self.faulty_devices[0]}")
-
-
 class SenderApplicationDelayDetection(SenderApplicationDelayBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=SenderApplicationDelayBase.root_cause_category,
@@ -177,13 +157,6 @@ class ReceiverResourceContentionBase:
             duration=600,
         )
         system_logger.info(f"Injected TCP receiver resource contention on host {self.faulty_devices[0]}")
-
-    def recover_fault(self):
-        self.injector.recover_stress_all(
-            host_name=self.faulty_devices[0],
-        )
-        system_logger.info(f"Recovered TCP receiver resource contention on host {self.faulty_devices[0]}")
-
 
 class ReceiverResourceContentionDetection(ReceiverResourceContentionBase, DetectionTask):
     META = ProblemMeta(

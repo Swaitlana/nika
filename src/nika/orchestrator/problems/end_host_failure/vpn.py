@@ -52,20 +52,6 @@ class VPNMembershipMissingBase:
         )
         self.logger.info(f"Removed VPN membership of {self.target_host} on {self.vpn_server}.")
 
-    def recover_fault(self):
-        # restore the real conf
-        self.kathara_api.exec_cmd(
-            host_name=self.vpn_server,
-            command="mv /etc/wireguard/wg0.conf.bak /etc/wireguard/wg0.conf",
-        )
-        # restart the wg interface
-        self.kathara_api.exec_cmd(
-            host_name=self.vpn_server,
-            command="wg-quick down wg0 && wg-quick up wg0",
-        )
-        self.logger.info(f"Restored VPN membership of {self.target_host} on {self.vpn_server}.")
-
-
 class HostIncorrectDNSDetection(VPNMembershipMissingBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=VPNMembershipMissingBase.root_cause_category,
@@ -96,5 +82,4 @@ class HostIncorrectDNSRCA(VPNMembershipMissingBase, RCATask):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     host_ip_conflict = VPNMembershipMissingBase(scenario_name="rip_small_internet_vpn")
-    host_ip_conflict.recover_fault()
     host_ip_conflict.inject_fault()

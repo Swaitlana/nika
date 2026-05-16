@@ -14,7 +14,7 @@ from typing import Literal
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(SCRIPT_DIR)))))
 RIP_UTILS = os.path.join(PROJECT_ROOT, "src/nika/net_env/utils/rip")
-WIREGUARD_KEYS_PATH = os.path.join(PROJECT_ROOT, "_utils", "wireguard", "keys.txt")
+WIREGUARD_KEYS_PATH = os.path.join(PROJECT_ROOT, "src/nika/net_env/utils/", "wireguard", "keys.txt")
 WG_VPN_NET = "172.16.1.0/24"
 WG_SERVER_IP = "172.16.1.1"
 WG_SERVER_PORT = 51820
@@ -91,7 +91,7 @@ def _load_wireguard_keys(keys_path: str) -> list[tuple[str, str]]:
     if not os.path.isfile(keys_path):
         raise FileNotFoundError(
             f"WireGuard keys file not found: {keys_path}. "
-            "Create _utils/wireguard/keys.txt with one line per key pair: private_key,public_key"
+            "Create src/nika/net_env/utils/keys.txt with one line per key pair: private_key,public_key"
         )
     pairs = []
     with open(keys_path, encoding="utf-8") as f:
@@ -153,7 +153,7 @@ def generate_rip_vpn_topology(
 ) -> str:
     """
     Generate Kathara-compatible lab configuration for RIP Small Internet VPN.
-    WireGuard keys are read from wireguard_keys_path (default: _utils/wireguard/keys.txt),
+    WireGuard keys are read from wireguard_keys_path (default: src/nika/net_env/utils/wireguard/keys.txt),
     format: one line per key pair: private_key,public_key. Needs at least 4 key pairs
     (vpn_server_1, host_1, web_server_1_1, web_server_1_2).
     Returns the absolute path to the output directory.
@@ -399,7 +399,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-k", "--wireguard-keys",
         default=None,
-        help="Path to WireGuard keys file (default: _utils/wireguard/keys.txt). Format: one line per key pair: private_key,public_key; need at least 4 pairs.",
+        help="Path to WireGuard keys file (default: src/nika/net_env/utils/wireguard/keys.txt). Format: one line per key pair: private_key,public_key; need at least 4 pairs.",
     )
     args = parser.parse_args()
     out = generate_rip_vpn_topology(

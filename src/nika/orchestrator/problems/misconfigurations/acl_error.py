@@ -39,10 +39,6 @@ class BGPAclBlockBase:
             table_name="filter",
         )
 
-    def recover_fault(self):
-        self.injector.recover_acl_rule(host_name=self.faulty_devices[0], table_name="filter")
-
-
 class BGPAclBlockDetection(BGPAclBlockBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=BGPAclBlockBase.root_cause_category,
@@ -100,10 +96,6 @@ class OSPFAclBlockBase:
             table_name="filter",
         )
 
-    def recover_fault(self):
-        self.injector.recover_acl_rule(host_name=self.faulty_devices[0], table_name="filter")
-
-
 class OSPFAclBlockDetection(OSPFAclBlockBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=OSPFAclBlockBase.root_cause_category,
@@ -151,10 +143,6 @@ class ARPAclBlockBase:
     def inject_fault(self):
         self.injector.inject_acl_rule(host_name=self.faulty_devices[0], rule="drop", table_name="filter", family="arp")
         self.kathara_api.exec_cmd(self.faulty_devices[0], "ip neigh flush all")
-
-    def recover_fault(self):
-        self.injector.recover_acl_rule(host_name=self.faulty_devices[0], table_name="filter", family="arp")
-
 
 class ARPAclBlockDetection(ARPAclBlockBase, DetectionTask):
     META = ProblemMeta(
@@ -205,10 +193,6 @@ class IcmpAclBlockBase:
             host_name=self.faulty_devices[0], family="ip", rule="ip protocol icmp drop", table_name="filter"
         )
 
-    def recover_fault(self):
-        self.injector.recover_acl_rule(host_name=self.faulty_devices[0], table_name="filter", family="ip")
-
-
 class IcmpAclBlockDetection(IcmpAclBlockBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=IcmpAclBlockBase.root_cause_category,
@@ -257,10 +241,6 @@ class HttpAclBlockBase:
         self.injector.inject_acl_rule(
             host_name=self.faulty_devices[0], family="inet", rule="tcp dport 80 drop", table_name="filter"
         )
-
-    def recover_fault(self):
-        self.injector.recover_acl_rule(host_name=self.faulty_devices[0], table_name="filter", family="inet")
-
 
 class HttpAclBlockDetection(HttpAclBlockBase, DetectionTask):
     META = ProblemMeta(
@@ -319,17 +299,6 @@ class DNSPortBlockedBase:
             table_name="filter",
         )
 
-    def recover_fault(self):
-        self.injector.recover_acl_rule(
-            host_name=self.faulty_devices[0],
-            table_name="filter",
-        )
-        self.injector.recover_acl_rule(
-            host_name=self.faulty_devices[0],
-            table_name="filter",
-        )
-
-
 class DNSPortBlockedDetection(DNSPortBlockedBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=DNSPortBlockedBase.root_cause_category,
@@ -361,4 +330,3 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     problem = HttpAclBlockBase(scenario_name="rip_small_internet_vpn")
     problem.inject_fault()
-    # problem.recover_fault()

@@ -45,19 +45,6 @@ class P4HeaderDefinitionErrorBase:
             f"./hostlab/{self.faulty_devices[0]}.startup",
         )
 
-    def recover_fault(self):
-        # restore the original p4 file
-        self.kathara_api.exec_cmd(self.faulty_devices[0], "cp {self.p4_name}.p4.bak {self.p4_name}.p4")
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            "pkill -f simple_switch",
-        )
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            f"./hostlab/{self.faulty_devices[0]}.startup",
-        )
-
-
 class P4CompilationErrorHeaderDetection(P4HeaderDefinitionErrorBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=P4HeaderDefinitionErrorBase.root_cause_category,
@@ -118,19 +105,6 @@ class P4CompilationErrorParserStateBase:
             f"./hostlab/{self.faulty_devices[0]}.startup",
         )
 
-    def recover_fault(self):
-        # restore the original p4 file
-        self.kathara_api.exec_cmd(self.faulty_devices[0], f"cp {self.p4_name}.p4.bak {self.p4_name}.p4")
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            "pkill -f simple_switch",
-        )
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            f"./hostlab/{self.faulty_devices[0]}.startup",
-        )
-
-
 class P4CompilationErrorParserStateDetection(P4CompilationErrorParserStateBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=P4CompilationErrorParserStateBase.root_cause_category,
@@ -182,15 +156,6 @@ class P4TableEntryMissingBase:
             "simple_switch_CLI <<< 'table_clear MyIngress.ipv4_lpm'",
         )
         logger.info(f"Injected fault: Deleted table entries on {self.faulty_devices[0]}")
-
-    def recover_fault(self):
-        # re-add the table entry
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            "simple_switch_CLI <<< $(cat commands.txt)",
-        )
-        logger.info(f"Recovered fault: Re-added table entries on {self.faulty_devices[0]}")
-
 
 class P4TableEntryMissingDetection(P4TableEntryMissingBase, DetectionTask):
     META = ProblemMeta(
@@ -251,23 +216,6 @@ class P4TableEntryMisconfigBase:
             "simple_switch_CLI <<< $(cat commands.txt)",
         )
         logger.info(f"Injected fault: Modified table entries on {self.faulty_devices[0]}")
-
-    def recover_fault(self):
-        # restore the original commands.txt
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            "simple_switch_CLI <<< 'table_clear MyIngress.ipv4_lpm'",
-        )
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            "simple_switch_CLI <<< $(cat commands.txt.bak)",
-        )
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            "rm commands.txt.bak",
-        )
-        logger.info(f"Recovered fault: Restored table entries on {self.faulty_devices[0]}")
-
 
 class P4TableEntryMisconfigDetection(P4TableEntryMisconfigBase, DetectionTask):
     META = ProblemMeta(
@@ -330,20 +278,6 @@ class P4MPLSLabelLimitExceededBase:
         )
         self.logger.info(f"Injected MPLS label limit exceeded fault on device: {self.faulty_devices[0]}")
 
-    def recover_fault(self):
-        # restore the original P4 program
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            "mv mpls.p4.bak mpls.p4 ; rm mpls.json",
-        )
-        self.kathara_api.exec_cmd(self.faulty_devices[0], "pkill -f simple_switch")
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            f"./hostlab/{self.faulty_devices[0]}.startup",
-        )
-        self.logger.info(f"Recovered MPLS label limit exceeded fault on device: {self.faulty_devices[0]}")
-
-
 class P4MPLSLabelLimitExceededDetection(P4MPLSLabelLimitExceededBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=P4MPLSLabelLimitExceededBase.root_cause_category,
@@ -375,4 +309,3 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     problem = P4TableEntryMisconfigBase()
     # problem.inject_fault()
-    problem.recover_fault()

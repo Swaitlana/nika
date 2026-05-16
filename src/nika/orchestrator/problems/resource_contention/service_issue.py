@@ -30,10 +30,6 @@ class DNSLookupLatencyBase:
     def inject_fault(self):
         self.injector.inject_delay(host_name=self.faulty_devices[0], intf_name="eth0", delay_ms=1000)
 
-    def recover_fault(self):
-        self.injector.recover_delay(host_name=self.faulty_devices[0], intf_name="eth0")
-
-
 class DNSLookupLatencyDetection(DNSLookupLatencyBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=DNSLookupLatencyBase.root_cause_category,
@@ -81,10 +77,6 @@ class LoadBalancerOverloadBase:
     def inject_fault(self):
         self.injector.inject_stress_all(host_name=self.faulty_devices[0])
 
-    def recover_fault(self):
-        self.injector.recover_stress_all(host_name=self.faulty_devices[0])
-
-
 class LoadBalancerOverloadDetection(LoadBalancerOverloadBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=LoadBalancerOverloadBase.root_cause_category,
@@ -116,4 +108,3 @@ if __name__ == "__main__":
     # Test the fault injection and recovery
     problem = LoadBalancerOverloadBase()
     problem.inject_fault()
-    # problem.recover_fault()

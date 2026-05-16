@@ -32,10 +32,6 @@ class Bmv2SwitchDownBase:
     def inject_fault(self):
         self.injector.inject_bmv2_down(host_name=self.faulty_devices[0])
 
-    def recover_fault(self):
-        self.injector.recover_bmv2_down(host_name=self.faulty_devices[0])
-
-
 class Bmv2SwitchDownDetection(Bmv2SwitchDownBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=Bmv2SwitchDownBase.root_cause_category,
@@ -87,10 +83,6 @@ class FrrDownBase:
     def inject_fault(self):
         self.injector.inject_service_down(host_name=self.faulty_devices[0], service_name="frr")
 
-    def recover_fault(self):
-        self.injector.recover_service_down(host_name=self.faulty_devices[0], service_name="frr")
-
-
 class FrrDownDetection(FrrDownBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=FrrDownBase.root_cause_category,
@@ -136,4 +128,3 @@ if __name__ == "__main__":
     print(problem.net_env.routers)
 
     # problem.inject_fault()
-    # problem.recover_fault()

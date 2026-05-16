@@ -43,19 +43,6 @@ class P4AggressiveDetectionThresholdsBase:
             f"./hostlab/{self.faulty_devices[0]}.startup",
         )
 
-    def recover_fault(self):
-        # restore the original p4 file
-        self.kathara_api.exec_cmd(self.faulty_devices[0], f"cp {self.p4_name}.p4.bak {self.p4_name}.p4")
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            "pkill -f simple_switch",
-        )
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            f"./hostlab/{self.faulty_devices[0]}.startup",
-        )
-
-
 class P4AggressiveDetectionThresholdsDetection(P4AggressiveDetectionThresholdsBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=P4AggressiveDetectionThresholdsBase.root_cause_category,

@@ -36,10 +36,6 @@ class DNSServiceDownBase:
     def inject_fault(self):
         self.injector.inject_service_down(host_name=self.faulty_devices[0], service_name="named")
 
-    def recover_fault(self):
-        self.injector.recover_service_down(host_name=self.faulty_devices[0], service_name="named")
-
-
 class DNSServiceDownDetection(DNSServiceDownBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=DNSServiceDownBase.root_cause_category,
@@ -88,10 +84,6 @@ class DHCPServiceDownBase:
     def inject_fault(self):
         self.injector.inject_service_down(host_name=self.faulty_devices[0], service_name="isc-dhcp-server")
 
-    def recover_fault(self):
-        self.injector.recover_service_down(host_name=self.faulty_devices[0], service_name="isc-dhcp-server")
-
-
 class DHCPServiceDownDetection(DHCPServiceDownBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=DHCPServiceDownBase.root_cause_category,
@@ -123,4 +115,3 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     problem = DHCPServiceDownBase()
     # problem.inject_fault()
-    problem.recover_fault()

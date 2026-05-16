@@ -45,15 +45,6 @@ class MacAddressConflictBase:
             f"Injected MAC address conflict on {self.faulty_devices[0]} with MAC {target_mac} of {self.faulty_devices[1]}"
         )
 
-    def recover_fault(self):
-        random_mac = "12:34:56:78:9a:bb"
-        self.kathara_api.exec_cmd(
-            host_name=self.faulty_devices[0],
-            command=f"ip link set dev eth0 address {random_mac}",
-        )
-        self.logger.info(f"Recovered MAC address conflict on {self.faulty_devices[0]} by setting MAC to {random_mac}")
-
-
 class MacAddressConflictDetection(MacAddressConflictBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=MacAddressConflictBase.root_cause_category,
@@ -85,4 +76,3 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     problem = MacAddressConflictBase(scenario_name="ospf_enterprise_static", topo_size="s")
     # problem.inject_fault()
-    # problem.recover_fault()

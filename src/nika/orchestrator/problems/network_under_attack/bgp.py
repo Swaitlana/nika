@@ -40,16 +40,6 @@ class BGPHijackingBase:
             host_name=self.faulty_devices[0], network=self.target_network, AS=asn_number
         )
 
-    def recover_fault(self):
-        asn_number = self.kathara_api.frr_get_bgp_asn_number(self.faulty_devices[0])
-        self.injector.recover_bgp_add_advertisement(
-            host_name=self.faulty_devices[0], network=self.target_network, AS=asn_number
-        )
-        self.injector.recover_bgp_add_interface(
-            host_name=self.faulty_devices[0], intf_name="lo", ip_address=self.target_network
-        )
-
-
 class BGPHijackingDetection(BGPHijackingBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=BGPHijackingBase.root_cause_category,

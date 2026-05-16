@@ -43,12 +43,6 @@ class DHCPMissingSubnetBase:
             subnet=subnet,
         )
 
-    def recover_fault(self):
-        self.injector.recover_deleted_subnet(
-            dhcp_server=self.faulty_devices[0],
-        )
-
-
 class DHCPMissingSubnetDetection(DHCPMissingSubnetBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=DHCPMissingSubnetBase.root_cause_category,
@@ -79,4 +73,3 @@ class DHCPMissingSubnetRCA(DHCPMissingSubnetBase, RCATask):
 if __name__ == "__main__":
     problem = DHCPMissingSubnetRCA(scenario_name="ospf_enterprise_dhcp")
     # problem.inject_fault()
-    # problem.recover_fault()

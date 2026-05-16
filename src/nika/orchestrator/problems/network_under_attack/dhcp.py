@@ -41,19 +41,6 @@ class DHCPSpoofedGatewayBase:
             wrong_gw=".".join(subnet.split(".")[:3] + ["254"]),
         )
 
-    def recover_fault(self):
-        subnet = str(
-            ipaddress.ip_network(
-                self.kathara_api.get_host_ip(self.faulty_devices[1], with_prefix=True), strict=False
-            ).network_address
-        )
-        self.injector.recover_wrong_gateway(
-            dhcp_server=self.faulty_devices[0],
-            subnet=subnet,
-            correct_gw=".".join(subnet.split(".")[:3] + ["1"]),
-        )
-
-
 class DHCPSpoofedGatewayDetection(DHCPSpoofedGatewayBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=DHCPSpoofedGatewayBase.root_cause_category,
@@ -109,16 +96,6 @@ class DHCPSpoofedDNSBase:
         )
 
         self.injector.inject_wrong_dns(dhcp_server=self.faulty_devices[0], subnet=subnet, wrong_dns="8.8.8.8")
-
-    def recover_fault(self):
-        subnet = str(
-            ipaddress.ip_network(
-                self.kathara_api.get_host_ip(self.faulty_devices[1], with_prefix=True), strict=False
-            ).network_address
-        )
-        dns_ip = self.kathara_api.get_host_ip("dns_server", with_prefix=False)
-        self.injector.recover_wrong_dns(dhcp_server=self.faulty_devices[0], subnet=subnet, correct_dns=dns_ip)
-
 
 class DHCPSpoofedDNSDetection(DHCPSpoofedDNSBase, DetectionTask):
     META = ProblemMeta(
@@ -177,7 +154,3 @@ class DHCPSpoofedSubnetBase:
             subnet=subnet,
         )
 
-    def recover_fault(self):
-        self.injector.recover_deleted_subnet(
-            dhcp_server=self.faulty_devices[0],
-        )

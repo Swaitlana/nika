@@ -34,13 +34,6 @@ class LinkFailureBase:
             intf_name=self.faulty_intf,
         )
 
-    def recover_fault(self):
-        self.injector.recover_intf_down(
-            host_name=self.faulty_devices[0],
-            intf_name=self.faulty_intf,
-        )
-
-
 class LinkFailureDetection(LinkFailureBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=LinkFailureBase.root_cause_category,
@@ -96,13 +89,6 @@ class LinkFlapBase:
             up_time=1,
         )
 
-    def recover_fault(self):
-        self.injector.recover_link_flap(
-            host_name=self.faulty_devices[0],
-            intf_name=self.faulty_intf,
-        )
-
-
 class LinkFlapDetection(LinkFlapBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=LinkFlapBase.root_cause_category,
@@ -156,13 +142,6 @@ class LinkDetachBase:
             intf_name=self.faulty_intf,
         )
 
-    def recover_fault(self):
-        self.injector.recover_link_detach(
-            host_name=self.faulty_devices[0],
-            intf_name=self.faulty_intf,
-        )
-
-
 class LinkDetachDetection(LinkDetachBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=LinkDetachBase.root_cause_category,
@@ -212,12 +191,6 @@ class LinkFragBase:
     def inject_fault(self):
         self.injector.inject_fragmentation_disabled(host_name=self.faulty_devices[0], mtu=10)
 
-    def recover_fault(self):
-        self.injector.recover_link_frag_disabled(
-            host_name=self.faulty_devices[0],
-        )
-
-
 class LinkFragDetection(LinkFragBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=LinkFragBase.root_cause_category,
@@ -249,4 +222,3 @@ if __name__ == "__main__":
     task = LinkFailureDetection()
     # task.inject_fault()
     # Here you would typically run your detection logic
-    task.recover_fault()

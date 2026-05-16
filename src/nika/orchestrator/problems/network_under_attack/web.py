@@ -38,10 +38,6 @@ class WebDoSBase:
     def inject_fault(self):
         self.injector.inject_ab_attack(attacker_host=self.attacker_device, website=self.target_website)
 
-    def recover_fault(self):
-        self.injector.recover_ab_attack(attacker_host=self.attacker_device)
-
-
 class WebDoSDetection(WebDoSBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=WebDoSBase.root_cause_category,
@@ -74,4 +70,3 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     problem = WebDoSBase(scenario_name="dc_clos_service")
     # problem.inject_fault()
-    problem.recover_fault()

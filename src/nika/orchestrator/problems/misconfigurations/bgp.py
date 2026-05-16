@@ -43,20 +43,6 @@ class BGPAsnMisconfigBase:
             host_name=self.faulty_devices[0], correct_asn=as_number, wrong_asn=as_number + 600
         )
 
-    def recover_fault(self):
-        asn = self.kathara_api.exec_cmd(
-            self.faulty_devices[0], "vtysh -c 'show bgp summary' | grep 'BGP router identifier'"
-        )
-        match = re.search(r"local AS number\s+(\d+)", asn)
-        if match:
-            as_number = int(match.group(1))
-        else:
-            raise ValueError("Could not find AS number in BGP summary output")
-        self.injector.recover_bgp_misconfig(
-            host_name=self.faulty_devices[0], correct_asn=as_number - 600, wrong_asn=as_number
-        )
-
-
 class BGPAsnMisconfigDetection(BGPAsnMisconfigBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=BGPAsnMisconfigBase.root_cause_category,
@@ -104,10 +90,6 @@ class BGPMissingAdvertiseBase:
     def inject_fault(self):
         # find the line in frr.conf that broadcasts the network and comment it out
         self.injector.inject_bgp_remove_advertisement(host_name=self.faulty_devices[0])
-
-    def recover_fault(self):
-        self.injector.recover_bgp_remove_advertisement(host_name=self.faulty_devices[0])
-
 
 class BGPMissingAdvertiseDetection(BGPMissingAdvertiseBase, DetectionTask):
     META = ProblemMeta(
@@ -165,12 +147,6 @@ class StaticBlackHoleBase:
             self.kathara_api.get_host_ip(self.victim_device, with_prefix=True), strict=False
         )
         self.injector.inject_add_route_blackhole_nexthop(host_name=self.faulty_devices[0], network=host_network)
-
-    def recover_fault(self):
-        host_ip = self.kathara_api.get_host_ip(self.victim_device, with_prefix=False)
-        host_network = ipaddress.ip_network(host_ip, strict=False)
-        self.injector.recover_add_route_blackhole_nexthop(host_name=self.faulty_devices[0], network=host_network)
-
 
 class StaticBlackHoleDetection(StaticBlackHoleBase, DetectionTask):
     META = ProblemMeta(
@@ -237,21 +213,6 @@ class BGPBlackholeRouteLeakBase:
             host_name=self.faulty_devices[0], network=network_30, AS=as_number
         )
 
-    def recover_fault(self):
-        network_30 = ipaddress.ip_network(f"{self.victim_ip}/30", strict=False)
-        asn_number = self.kathara_api.exec_cmd(
-            self.faulty_devices[0], "vtysh -c 'show bgp summary' | grep 'BGP router identifier'"
-        )
-        match = re.search(r"local AS number\s+(\d+)", asn_number)
-        if match:
-            as_number = int(match.group(1))
-        else:
-            raise ValueError("Could not find AS number in BGP summary output")
-        self.injector.recover_add_route_blackhole_advertise(
-            host_name=self.faulty_devices[0], network=network_30, AS=as_number
-        )
-
-
 class BGPBlackholeRouteLeakDetection(BGPBlackholeRouteLeakBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=BGPBlackholeRouteLeakBase.root_cause_category,
@@ -310,16 +271,6 @@ class BGPHijackingBase:
             host_name=self.faulty_devices[0], network=self.target_network, AS=asn_number
         )
 
-    def recover_fault(self):
-        asn_number = self.kathara_api.frr_get_bgp_asn_number(self.faulty_devices)
-        self.injector.recover_bgp_add_advertisement(
-            host_name=self.faulty_devices[0], network=self.target_network, AS=asn_number
-        )
-        self.injector.recover_bgp_add_interface(
-            host_name=self.faulty_devices[0], intf_name="lo", ip_address=self.target_network
-        )
-
-
 class BGPHijackingDetection(BGPHijackingBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=BGPHijackingBase.root_cause_category,
@@ -351,4 +302,3 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     task = BGPAsnMisconfigBase(scenario_name="dc_clos_bgp")
     task.inject_fault()
-    # task.recover_fault()

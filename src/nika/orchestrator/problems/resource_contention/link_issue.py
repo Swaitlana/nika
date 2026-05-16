@@ -34,14 +34,6 @@ class LinkHighPacketCorruptionBase:
             host_name=self.faulty_devices[0], intf_name=intf_name, corruption_percentage=60
         )
 
-    def recover_fault(self):
-        intf_name = self.kathara_api.get_host_interfaces(self.faulty_devices[0])[-1]
-        self.injector.recover_packet_corruption(
-            host_name=self.faulty_devices[0],
-            intf_name=intf_name,
-        )
-
-
 class LinkHighPacketCorruptionDetection(LinkHighPacketCorruptionBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=LinkHighPacketCorruptionBase.root_cause_category,
@@ -102,21 +94,6 @@ class LinkBandwidthThrottlingBase:
                 od_dict[host][self.faulty_devices[0]] = mbps
         res = generator.start_traffic_background(od_dicts=od_dict, interval=300, unit="M", udp=True)
         system_logger.info(f"Started background traffic generation {res} to amplify the bandwidth throttling effect.")
-
-    def recover_fault(self):
-        intf_name = self.kathara_api.get_host_interfaces(self.faulty_devices[0])[0]
-        self.injector.recover_bandwidth_limit(
-            host_name=self.faulty_devices[0],
-            intf_name=intf_name,
-        )
-
-        # stop all background traffic
-        for host in self.net_env.hosts:
-            self.kathara_api.exec_cmd(host_name=host, command="pkill -f iperf3")
-        for server in self.net_env.servers["web"]:
-            self.kathara_api.exec_cmd(host_name=server, command="pkill -f iperf3")
-        system_logger.info("Stopped all background traffic generation.")
-
 
 class LinkBandwidthThrottlingDetection(LinkBandwidthThrottlingBase, DetectionTask):
     META = ProblemMeta(
@@ -186,17 +163,6 @@ class IncastTrafficNetworkLimitationBase:
         res = generator.start_traffic_background(od_dicts=od_dict, interval=300, unit="M", udp=True)
         system_logger.info(f"Started background traffic generation {res} to amplify the network limitation effect.")
 
-    def recover_fault(self):
-        self.kathara_api.tc_clear_intf(host_name=self.faulty_devices[0], intf_name="eth0")
-        system_logger.info(f"Recovered network limitation on host {self.faulty_devices[0]}")
-        # stop all background traffic
-        for host in self.net_env.hosts:
-            self.kathara_api.exec_cmd(host_name=host, command="pkill -f iperf3")
-        for server in self.net_env.servers["web"]:
-            self.kathara_api.exec_cmd(host_name=server, command="pkill -f iperf3")
-        system_logger.info("Stopped all background traffic generation.")
-
-
 class IncastTrafficNetworkLimitationDetection(IncastTrafficNetworkLimitationBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=IncastTrafficNetworkLimitationBase.root_cause_category,
@@ -227,5 +193,4 @@ class IncastTrafficNetworkLimitationRCA(IncastTrafficNetworkLimitationBase, RCAT
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     task = LinkBandwidthThrottlingBase(scenario_name="dc_clos_bgp", topo_size="m")
-    # task.recover_fault()
     task.inject_fault()

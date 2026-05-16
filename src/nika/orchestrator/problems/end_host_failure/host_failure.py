@@ -30,12 +30,6 @@ class HostCrashBase:
             host_name=self.faulty_devices[0],
         )
 
-    def recover_fault(self):
-        self.injector.recover_host_down(
-            host_name=self.faulty_devices[0],
-        )
-
-
 class HostCrashDetection(HostCrashBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=HostCrashBase.root_cause_category,

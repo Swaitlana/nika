@@ -58,17 +58,6 @@ class DNSRecordErrorBase:
             f"to wrong IP {self.wrong_ip} instead of {self.right_ip}"
         )
 
-    def recover_fault(self):
-        # restore original record
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            f"mv /etc/bind/db.{self.target_domain}.bak /etc/bind/db.{self.target_domain}",
-        )
-        # restart dns service
-        self.kathara_api.exec_cmd(self.faulty_devices[0], "systemctl restart named")
-        logger.info(f"Recovered DNS record error on {self.faulty_devices[0]}")
-
-
 class DNSRecordErrorDetection(DNSRecordErrorBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=DNSRecordErrorBase.root_cause_category,
@@ -100,4 +89,3 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     dns_error = DNSRecordErrorBase(scenario_name="ospf_enterprise_dhcp")
     dns_error.inject_fault()
-    # dns_error.recover_fault()

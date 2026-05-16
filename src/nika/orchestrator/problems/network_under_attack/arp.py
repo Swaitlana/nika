@@ -35,14 +35,6 @@ class ArpCachePoisoningBase:
             fake_mac="00:11:22:33:44:55",
         )
 
-    def recover_fault(self):
-        default_gateway = self.kathara_api.get_default_gateway(self.faulty_devices[0])
-        self.injector.recover_arp_misconfiguration(
-            host_name=self.faulty_devices[0],
-            ip_address=default_gateway,
-        )
-
-
 class ArpCachePoisoningDetection(ArpCachePoisoningBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=ArpCachePoisoningBase.root_cause_category,

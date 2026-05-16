@@ -34,13 +34,6 @@ class SDNControllerCrashBase:
             "pkill -f ryu-manager",
         )
 
-    def recover_fault(self):
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            "ryu-manager ryu.app.simple_switch &",
-        )
-
-
 class SDNControllerCrashDetection(SDNControllerCrashBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=SDNControllerCrashBase.root_cause_category,
@@ -91,10 +84,6 @@ class SouthboundPortBlockBase:
             host_name=self.faulty_devices[0],
             rule=f"tcp dport {self.southbound_port} drop",
         )
-
-    def recover_fault(self):
-        self.injector.recover_acl_rule(host_name=self.faulty_devices[0])
-
 
 class SouthboundPortBlockDetection(SouthboundPortBlockBase, DetectionTask):
     META = ProblemMeta(
@@ -152,17 +141,6 @@ class SouthboundPortMismatchBase:
             f"ryu-manager --ofp-tcp-listen-port {self.mismatched_port} ryu.app.simple_switch &",
         )
 
-    def recover_fault(self):
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            "pkill -f ryu-manager",
-        )
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            "ryu-manager ryu.app.simple_switch &",
-        )
-
-
 class SouthboundPortMismatchDetection(SouthboundPortMismatchBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=SouthboundPortMismatchBase.root_cause_category,
@@ -213,14 +191,6 @@ class FlowRuleShadowingBase:
             self.faulty_devices[0],
             f"ovs-ofctl add-flow {self.faulty_devices[0]} 'priority=100,actions=drop'",
         )
-
-    def recover_fault(self):
-        # Remove the shadowing flow rule
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            f"ovs-ofctl --strict del-flows {self.faulty_devices[0]} 'priority=100'",
-        )
-
 
 class FlowRuleShadowingDetection(FlowRuleShadowingBase, DetectionTask):
     META = ProblemMeta(
@@ -277,18 +247,6 @@ class FlowRuleLoopBase:
             f"ovs-ofctl add-flow {self.faulty_devices[1]} 'in_port=eth1,actions=output:eth1'",
         )
 
-    def recover_fault(self):
-        # Remove the loop-inducing flow rules
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[0],
-            f"ovs-ofctl --strict del-flows {self.faulty_devices[0]} 'in_port=eth0'",
-        )
-        self.kathara_api.exec_cmd(
-            self.faulty_devices[1],
-            f"ovs-ofctl --strict del-flows {self.faulty_devices[1]} 'in_port=eth1'",
-        )
-
-
 class FlowRuleLoopDetection(FlowRuleLoopBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=FlowRuleLoopBase.root_cause_category,
@@ -321,4 +279,3 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     problem = FlowRuleLoopBase()
     problem.inject_fault()
-    # problem.recover_fault()

@@ -45,29 +45,6 @@ class HostMissingIPBase:
         )
         self.logger.info(f"Injected missing IP on {self.faulty_devices[0]} from {real_ip} and gateway {real_gateway}.")
 
-    def recover_fault(self):
-        # read the backed-up IP from the file
-        output = self.kathara_api.exec_cmd(
-            host_name=self.faulty_devices[0],
-            command="cat /tmp/removed_ip.txt",
-        )
-        real_ip, real_gateway = output.strip().split()
-        self.kathara_api.exec_cmd(
-            host_name=self.faulty_devices[0],
-            command=f"ip addr add {real_ip} dev {self.intf_name}",
-        )
-        self.kathara_api.exec_cmd(
-            host_name=self.faulty_devices[0],
-            command="ip route add default via " + real_gateway,
-        )
-        # remove the backup file
-        self.kathara_api.exec_cmd(
-            host_name=self.faulty_devices[0],
-            command="rm /tmp/removed_ip.txt",
-        )
-        self.logger.info(f"Recovered missing IP on {self.faulty_devices[0]} to {real_ip} and gateway {real_gateway}.")
-
-
 class HostMissingIPDetection(HostMissingIPBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=HostMissingIPBase.root_cause_category,
@@ -121,17 +98,6 @@ class HostIPConflictBase:
             intf_name="eth0",
             new_gateway=self.kathara_api.get_default_gateway(self.faulty_devices[0]),
         )
-
-    def recover_fault(self):
-        ip_address = f"10.1.1.{200}"  # Assign a new IP to avoid conflict
-        self.injector.recover_ip_change(
-            host_name=self.faulty_devices[1],
-            old_ip=self.kathara_api.get_host_ip(self.faulty_devices[1], "eth0", with_prefix=True),
-            new_ip=ip_address,
-            intf_name="eth0",
-            old_gateway=self.kathara_api.get_default_gateway(self.faulty_devices[1]),
-        )
-
 
 class HostIPConflictDetection(HostIPConflictBase, DetectionTask):
     META = ProblemMeta(
@@ -189,16 +155,6 @@ class HostIncorrectIPBase:
             intf_name="eth0",
             new_gateway=ip_gateway,
         )
-
-    def recover_fault(self):
-        self.injector.recover_ip_change(
-            host_name=self.faulty_devices[0],
-            old_ip=self.incorrect_ip,
-            new_ip="10.1.1.2/24",
-            intf_name="eth0",
-            old_gateway="10.1.1.1",
-        )
-
 
 class HostIncorrectIPDetection(HostIncorrectIPBase, DetectionTask):
     META = ProblemMeta(
@@ -261,22 +217,6 @@ class HostIncorrectGatewayBase:
             new_gateway=new_gateway,
         )
 
-    def recover_fault(self):
-        try:
-            old_gateway_list = self.kathara_api.get_default_gateway(self.faulty_devices[0]).split(".")
-            old_gateway_list[-1] = "1"
-            old_gateway = ".".join(old_gateway_list)
-        except Exception:
-            old_gateway = "10.1.1.1"
-        self.injector.recover_ip_change(
-            host_name=self.faulty_devices[0],
-            old_ip=self.kathara_api.get_host_ip(self.faulty_devices[0], "eth0", with_prefix=True),
-            new_ip=self.kathara_api.get_host_ip(self.faulty_devices[0], "eth0", with_prefix=True),
-            intf_name="eth0",
-            old_gateway=old_gateway,
-        )
-
-
 class HostIncorrectGatewayDetection(HostIncorrectGatewayBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=HostIncorrectGatewayBase.root_cause_category,
@@ -335,21 +275,6 @@ class HostIncorrectNetmaskBase:
             new_gateway=self.kathara_api.get_default_gateway(self.faulty_devices[0]),
         )
 
-    def recover_fault(self):
-        old_ip = self.kathara_api.get_host_ip(self.faulty_devices[0], "eth0", with_prefix=True)
-        old_ip = old_ip.split("/")
-        old_ip[-1] = "24"
-        old_ip = "/".join(old_ip)
-
-        self.injector.recover_ip_change(
-            host_name=self.faulty_devices[0],
-            old_ip=self.kathara_api.get_host_ip(self.faulty_devices[0], "eth0", with_prefix=True),
-            new_ip=old_ip,
-            intf_name="eth0",
-            old_gateway=self.kathara_api.get_default_gateway(self.faulty_devices[0]),
-        )
-
-
 class HostIncorrectNetmaskDetection(HostIncorrectNetmaskBase, DetectionTask):
     META = ProblemMeta(
         root_cause_category=HostIncorrectNetmaskBase.root_cause_category,
@@ -399,13 +324,6 @@ class HostIncorrectDNSBase:
         self.injector.inject_dns_misconfiguration(
             host_name=self.faulty_devices[0],
         )
-
-    def recover_fault(self):
-        self.injector.recover_dns_misconfiguration(
-            host_name=self.faulty_devices[0],
-            original_dns_ip=self.net_env.dns_ip,
-        )
-
 
 class HostIncorrectDNSDetection(HostIncorrectDNSBase, DetectionTask):
     META = ProblemMeta(
