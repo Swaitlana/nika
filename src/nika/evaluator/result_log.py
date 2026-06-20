@@ -31,6 +31,7 @@ class EvalResult:
     root_cause_category: str = None
     root_cause_name: str = None
     net_env: str = None
+    tool_granularity: str = None
     scenario_topo_size: str = None
     session_id: str = None
     in_tokens: int = None

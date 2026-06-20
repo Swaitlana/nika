@@ -28,6 +28,7 @@ class Session:
         self.lab_name = lab_name
         self.scenario_topo_size = scenario_topo_size
         self.scenario_params = scenario_params or {}
+        self.tool_granularity = os.environ.get("TOOL_GRANULARITY", "fine").lower() 
         self.session_dir = os.path.join(str(RESULTS_DIR), session_id)
         os.makedirs(self.session_dir, exist_ok=True)
         self.store.create_session(
@@ -36,6 +37,7 @@ class Session:
                 "lab_name": self.lab_name,
                 "scenario_name": self.scenario_name,
                 "scenario_topo_size": self.scenario_topo_size,
+                "tool_granularity": self.tool_granularity,
                 "scenario_params": self.scenario_params,
                 "session_dir": self.session_dir,
                 "status": "running",
