@@ -229,6 +229,23 @@ def exec_shell(
     kathara_api = KatharaAPI(lab_name=get_lab_name())
     result = kathara_api.exec_cmd(host_name, command)
     return result
+@safe_tool
+@mcp.tool()
+def get_tunnel_status(host_name: str) -> str:
+    """Get the WireGuard tunnel status on a host.
+
+    Runs 'wg show' on the specified host and returns the output,
+    including peer public keys, handshake recency, and transfer counters.
+
+    Args:
+        host_name (str): The name of the host (e.g. 'vpn_server_1', 'pc1').
+
+    Returns:
+        str: The output of 'wg show' on the host.
+    """
+    kathara_api = KatharaAPI(lab_name=get_lab_name())
+    result = kathara_api.exec_cmd(host_name=host_name, command="wg show")
+    return result
 
 
 @safe_tool
