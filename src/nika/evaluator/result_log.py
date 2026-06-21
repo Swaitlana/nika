@@ -162,6 +162,7 @@ def build_eval_result_from_session_dir(session_dir: Path) -> EvalResult:
         root_cause_name=run_meta.get("root_cause_name"),
         net_env=run_meta.get("scenario_name"),
         scenario_topo_size=run_meta.get("scenario_topo_size"),
+        tool_granularity=run_meta.get("tool_granularity"),
         session_id=run_meta.get("session_id") or session_dir.name,
         in_tokens=trace_metrics.get("in_tokens"),
         out_tokens=trace_metrics.get("out_tokens"),
