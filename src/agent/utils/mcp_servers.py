@@ -1,3 +1,5 @@
+import os
+
 from nika.config import MCP_SERVER_DIR
 
 # Keyword sets that trigger inclusion of each optional Kathara MCP server.
@@ -7,11 +9,17 @@ _TELEMETRY_KEYWORDS = frozenset({"telemetry"})
 
 
 def select_diagnosis_servers(scenario_name: str, problem_names: list[str]) -> list[str]:
-    """Return the minimal set of Kathara MCP server names needed for *scenario*.
+    """Return the set of Kathara MCP server names needed for *scenario*.
 
-    ``kathara_base_mcp_server`` is always included.  The three specialised
-    servers are added when keyword signals appear in the scenario or problem
-    names (tokens are split on ``_`` and ``-``).
+    Tool granularity is selected by the ``TOOL_GRANULARITY`` environment
+    variable (``fine`` | ``coarse``; default ``fine``):
+
+    * ``coarse`` -> only ``kathara_coarse_mcp_server`` (the three per-layer
+      aggregate tools). The atomic base/frr servers are intentionally NOT
+      loaded, so the agent cannot bypass the aggregates.
+    * ``fine`` (default) -> ``kathara_base_mcp_server`` plus the specialised
+      servers selected by keyword signals in the scenario/problem names
+      (tokens split on ``_`` and ``-``).
 
     Parameters
     ----------
@@ -20,6 +28,15 @@ def select_diagnosis_servers(scenario_name: str, problem_names: list[str]) -> li
     problem_names:
         E.g. ``["bgp_session_down"]``.
     """
+    granularity = os.environ.get("TOOL_GRANULARITY", "fine").strip().lower()
+
+    if granularity == "coarse":
+        return ["kathara_coarse_mcp_server"]
+    if granularity != "fine":
+        raise ValueError(
+            f"TOOL_GRANULARITY must be 'fine' or 'coarse', got {granularity!r}."
+        )
+
     combined = (scenario_name + " " + " ".join(problem_names)).lower()
     tokens = set(combined.replace("_", " ").replace("-", " ").split())
 
@@ -74,6 +91,11 @@ class MCPServerConfig:
                 "kathara_telemetry_mcp_server": {
                     "command": "python3",
                     "args": [f"{self.mcp_server_dir}/kathara_telemetry_mcp_server.py"],
+                    "transport": "stdio",
+                },
+                "kathara_coarse_mcp_server": {
+                    "command": "python3",
+                    "args": [f"{self.mcp_server_dir}/kathara_coarse_mcp_server.py"],
                     "transport": "stdio",
                 },
             }

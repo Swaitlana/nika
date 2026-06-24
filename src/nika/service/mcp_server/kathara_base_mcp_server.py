@@ -1,6 +1,3 @@
-import asyncio
-from typing import Dict, List
-
 from mcp.server.fastmcp import FastMCP
 
 from nika.service.kathara import KatharaAPIALL as KatharaAPI
@@ -197,40 +194,6 @@ def iperf_test(
 
 @safe_tool
 @mcp.tool()
-def cat_file(host_name: str, file_path: str) -> str:
-    """Show contents of a file on a host.
-
-    Args:
-        host_name (str): Name of the host.
-        file_path (str): Path to the file on the host.
-
-    Returns:
-        str: The contents of the file on the host.
-    """
-    kathara_api = KatharaAPI(lab_name=get_lab_name())
-    result = kathara_api.exec_cmd(host_name=host_name, command=f"cat {file_path}")
-    return result
-
-
-@safe_tool
-@mcp.tool()
-def exec_shell(
-    host_name: str,
-    command: str,
-) -> str:
-    """
-    Execute a shell command on a host.
-
-    Args:
-        host_name (str): The name of the host.
-        command (str): The shell command to execute.
-    """
-
-    kathara_api = KatharaAPI(lab_name=get_lab_name())
-    result = kathara_api.exec_cmd(host_name, command)
-    return result
-@safe_tool
-@mcp.tool()
 def get_tunnel_status(host_name: str) -> str:
     """Get the WireGuard tunnel status on a host.
 
@@ -246,32 +209,6 @@ def get_tunnel_status(host_name: str) -> str:
     kathara_api = KatharaAPI(lab_name=get_lab_name())
     result = kathara_api.exec_cmd(host_name=host_name, command="wg show")
     return result
-
-
-@safe_tool
-@mcp.tool()
-async def exec_shell_dual(
-    host1: str,
-    cmd1: str,
-    host2: str,
-    cmd2: str,
-) -> Dict[str, List[str]]:
-    """
-    Execute shell commands on two hosts concurrently.
-    Args:
-        host1 (str): The name of the first host.
-        cmd1 (str): The shell command to execute on the first host.
-        host2 (str): The name of the second host.
-        cmd2 (str): The shell command to execute on the second host.
-    """
-    kathara_api = KatharaAPI(lab_name=get_lab_name())
-
-    result1, result2 = await asyncio.gather(
-        kathara_api.exec_cmd_async(host1, cmd1),
-        kathara_api.exec_cmd_async(host2, cmd2),
-    )
-
-    return {"host1": [result1], "host2": [result2]}
 
 
 if __name__ == "__main__":
