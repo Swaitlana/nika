@@ -1,3 +1,6 @@
+## Fault Injection on External Router 
+nika exec --session-id 20260719-093618-ef40be external_router_1 vtysh -c "'configure terminal'" -c "'router rip'" -c "'no network 20.0.0.0/24'" 2>&1 | tee pair-1b-fault_injection.txt
+
 ## Route table on external router after fault injection :
 (nika) Swaitlana@MacBook-Air-2 pair-1-attempt-2 % nika exec --session-id 20260719-093618-ef40be external_router_1 vtysh -c "'show running-config'"
 Building configuration...
