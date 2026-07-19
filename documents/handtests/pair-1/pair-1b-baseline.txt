@@ -1,0 +1,100 @@
+## Route table on Routers ( Router1 and gateway router and external router before removing RIP from external router)
+
+(nika) Swaitlana@MacBook-Air-2 pair-1-attempt-2 % nika exec --session-id 20260719-093618-ef40be external_router_1 vtysh -c "'show running-config'"
+Building configuration...
+
+Current configuration:
+!
+frr version 10.5.3
+frr defaults traditional
+hostname external_router_1
+log file /var/log/frr/frr.log
+service integrated-vtysh-config
+!
+router rip
+ network 192.168.0.0/16
+ network 20.0.0.0/24
+ redistribute static
+exit
+!
+end
+
+1. router1 Route Table 
+IPv4 unicast VRF default:
+C>* 10.0.0.0/24 is directly connected, eth2, weight 1, 01:25:34
+L>* 10.0.0.1/32 is directly connected, eth2, weight 1, 01:25:34
+R>* 10.0.1.0/24 [120/2] via 192.168.0.1, eth0, weight 1, 01:25:33
+R>* 20.0.0.0/24 [120/3] via 192.168.0.3, eth1, weight 1, 01:25:32
+C>* 192.168.0.0/31 is directly connected, eth0, weight 1, 01:25:34
+L>* 192.168.0.0/32 is directly connected, eth0, weight 1, 01:25:34
+C>* 192.168.0.2/31 is directly connected, eth1, weight 1, 01:25:34
+L>* 192.168.0.2/32 is directly connected, eth1, weight 1, 01:25:34
+R>* 192.168.0.4/31 [120/2] via 192.168.0.1, eth0, weight 1, 01:25:33
+R>* 192.168.0.6/31 [120/2] via 192.168.0.3, eth1, weight 1, 01:25:32
+
+2. gateway_router route table 
+IPv4 unicast VRF default:
+R>* 10.0.0.0/24 [120/2] via 192.168.0.2, eth0, weight 1, 01:38:06
+R>* 10.0.1.0/24 [120/2] via 192.168.0.4, eth1, weight 1, 01:38:06
+R>* 20.0.0.0/24 [120/2] via 192.168.0.6, eth2, weight 1, 01:38:05
+R>* 192.168.0.0/31 [120/2] via 192.168.0.4, eth1, weight 1, 01:38:06
+C>* 192.168.0.2/31 is directly connected, eth0, weight 1, 01:38:07
+L>* 192.168.0.3/32 is directly connected, eth0, weight 1, 01:38:07
+C>* 192.168.0.4/31 is directly connected, eth1, weight 1, 01:38:07
+L>* 192.168.0.5/32 is directly connected, eth1, weight 1, 01:38:07
+C>* 192.168.0.6/31 is directly connected, eth2, weight 1, 01:38:07
+L>* 192.168.0.7/32 is directly connected, eth2, weight 1, 01:38:07
+
+3. external_router_1 route Table 
+(nika) Swaitlana@MacBook-Air-2 pair-1-attempt-2 % nika exec --session-id 20260719-093618-ef40be external_router_1 vtysh -c "'show ip route'"
+IPv4 unicast VRF default:
+R>* 10.0.0.0/24 [120/3] via 192.168.0.7, eth0, weight 1, 01:30:53
+R>* 10.0.1.0/24 [120/3] via 192.168.0.7, eth0, weight 1, 01:30:53
+C>* 20.0.0.0/24 is directly connected, br0, weight 1, 01:30:53
+L>* 20.0.0.1/32 is directly connected, br0, weight 1, 01:30:53
+R>* 192.168.0.0/31 [120/3] via 192.168.0.7, eth0, weight 1, 01:30:53
+R>* 192.168.0.2/31 [120/2] via 192.168.0.7, eth0, weight 1, 01:30:53
+R>* 192.168.0.4/31 [120/2] via 192.168.0.7, eth0, weight 1, 01:30:53
+C>* 192.168.0.6/31 is directly connected, eth0, weight 1, 01:30:54
+L>* 192.168.0.6/32 is directly connected, eth0, weight 1, 01:30:54
+
+## Ping Tests
+
+1. pc1 can ping vpn_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-1-attempt-2 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 3 172.16.1.1 
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+64 bytes from 172.16.1.1: icmp_seq=1 ttl=64 time=1.51 ms
+64 bytes from 172.16.1.1: icmp_seq=2 ttl=64 time=2.26 ms
+64 bytes from 172.16.1.1: icmp_seq=3 ttl=64 time=2.64 ms
+
+--- 172.16.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2004ms
+rtt min/avg/max/mdev = 1.513/2.138/2.640/0.468 ms
+
+2. pc1 can ping web_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-1-attempt-2 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 3 172.16.1.21
+PING 172.16.1.21 (172.16.1.21) 56(84) bytes of data.
+64 bytes from 172.16.1.21: icmp_seq=1 ttl=63 time=1.68 ms
+64 bytes from 172.16.1.21: icmp_seq=2 ttl=63 time=4.04 ms
+64 bytes from 172.16.1.21: icmp_seq=3 ttl=63 time=3.61 ms
+
+--- 172.16.1.21 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2012ms
+rtt min/avg/max/mdev = 1.681/3.112/4.044/1.027 ms
+
+3. pc1 can successfully curl over web server 172.16.1.21
+(nika) Swaitlana@MacBook-Air-2 pair-1-attempt-2 % nika exec --session-id 20260719-093618-ef40be pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+200
+
+4. vpn_server_1 can ping pc1 back !!
+(nika) Swaitlana@MacBook-Air-2 pair-1-attempt-2 % nika exec --session-id 20260719-093618-ef40be vpn_server_1 ping -c 3 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+64 bytes from 172.16.1.11: icmp_seq=1 ttl=64 time=0.714 ms
+64 bytes from 172.16.1.11: icmp_seq=2 ttl=64 time=2.32 ms
+64 bytes from 172.16.1.11: icmp_seq=3 ttl=64 time=2.19 ms
+
+--- 172.16.1.11 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2032ms
+rtt min/avg/max/mdev = 0.714/1.740/2.317/0.727 ms
+(nika) Swaitlana@MacBook-Air-2 pair-1-attempt-2 % 
+

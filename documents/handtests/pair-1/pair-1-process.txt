@@ -1,0 +1,24 @@
+---
+
+## PAIR 1 — tunnel dead, no handshake
+
+### Overlay: peer removed from server vpn_server_1
+1. Inject:  `vpn_server_1 "wg set wg0 peer 1nsFyoZ... remove"`
+2. Confirm: `vpn_server_1 "wg show"` — pc1 peer gone, web-server peers intact
+3. Wait ~2 min → fingerprint set
+4. Restore: `vpn_server_1 "wg set wg0 peer 1nsFyoZ... allowed-ips 172.16.1.11/32 endpoint 10.0.0.2:51803"`
+5. Heal proof: ping 172.16.1.1 → 0% loss + fresh handshake
+
+### Underlay: RIP withdrawal on external_router_1
+1. Inject:
+   `external_router_1 vtysh -c "'configure terminal'" -c "'router rip'" -c "'no network 20.0.0.0/24'"`
+   (quoting: outer double, inner single per -c; if vtysh errors, run as separate calls)
+2. Confirm: `external_router_1 vtysh -c "'show ip rip'"` — subnet gone;
+   `gateway_router vtysh -c "'show ip route'"` — route to 20.0.0.0/24 aged out
+   (also proves mesh did not reroute around the withdrawal)
+3. Wait ~2–3 min (RIP timers) → fingerprint set
+4. Restore: same chain with `'network 20.0.0.0/24'`
+5. Heal proof: route back in show ip route → ping 172.16.1.1 → 0% loss
+   (allow ~30 s RIP convergence)
+
+---

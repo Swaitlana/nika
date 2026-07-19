@@ -1,0 +1,24 @@
+## pc1 cant ping vpn_server_1 and curl fails to web_server_1 with a status code 000 from pc1 post fault injection.
+
+1. pc1 pings to vpn server fails 
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 3 172.16.1.1
+[TIMEOUT] Command 'ping -c 3 172.16.1.1' on 'pc1' exceeded 10.0s.
+
+2. pc1 pings fails to web_server_1
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 3 172.16.1.21
+[TIMEOUT] Command 'ping -c 3 172.16.1.21' on 'pc1' exceeded 10.0s.
+
+3. pc1 curl fails to web_server_1 with error code 000
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+000
+
+4. vpn_server_1 cant ping pc1 post fault injection
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be vpn_server_1 ping -c 3 172.16.1.11
+
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+From 172.16.1.1 icmp_seq=1 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=2 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=3 Destination Host Unreachable
+
+--- 172.16.1.11 ping statistics ---
+3 packets transmitted, 0 received, +3 errors, 100% packet loss, time 2054ms

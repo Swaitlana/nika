@@ -1,0 +1,76 @@
+## Configuration of wg command before removing the peer key from vpn_server_1 on both pc1 and vpn_server_1
+
+1. wg config on pc1 in a healthy state
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 58833
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 4 minutes, 22 seconds ago
+  transfer: 12.59 KiB received, 2.33 KiB sent
+
+2. wg configuration on vpn_server_1
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:34292
+  allowed ips: 172.16.1.21/32
+  latest handshake: 4 minutes, 49 seconds ago
+  transfer: 12.77 KiB received, 2.39 KiB sent
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  endpoint: 10.0.0.2:58833
+  allowed ips: 172.16.1.11/32
+  latest handshake: 5 minutes, 3 seconds ago
+  transfer: 2.33 KiB received, 12.59 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:51899
+  allowed ips: 172.16.1.22/32
+  latest handshake: 13 minutes, 8 seconds ago
+  transfer: 564 B received, 476 B sent
+
+## Ping and curl tests from pc1 to vpn_server_1 and web_server_1 successfull
+
+1. pc1 can ping vpn_server_1
+nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 3 172.16.1.1 
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+64 bytes from 172.16.1.1: icmp_seq=1 ttl=64 time=1.81 ms
+64 bytes from 172.16.1.1: icmp_seq=2 ttl=64 time=2.31 ms
+64 bytes from 172.16.1.1: icmp_seq=3 ttl=64 time=2.45 ms
+
+--- 172.16.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2010ms
+rtt min/avg/max/mdev = 1.811/2.190/2.447/0.273 ms
+
+2. pc1 can ping web_server_1 
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 3 172.16.1.21
+PING 172.16.1.21 (172.16.1.21) 56(84) bytes of data.
+64 bytes from 172.16.1.21: icmp_seq=1 ttl=63 time=3.11 ms
+64 bytes from 172.16.1.21: icmp_seq=2 ttl=63 time=3.06 ms
+64 bytes from 172.16.1.21: icmp_seq=3 ttl=63 time=3.16 ms
+
+--- 172.16.1.21 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2011ms
+rtt min/avg/max/mdev = 3.060/3.109/3.164/0.042 ms
+
+3. pc1 can curl successfully over web_server_1
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+200
+
+4. vpn_server_1 can ping pc1 
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be vpn_server_1 ping -c 3 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+64 bytes from 172.16.1.11: icmp_seq=1 ttl=64 time=0.744 ms
+64 bytes from 172.16.1.11: icmp_seq=2 ttl=64 time=2.27 ms
+64 bytes from 172.16.1.11: icmp_seq=3 ttl=64 time=2.38 ms
+
+

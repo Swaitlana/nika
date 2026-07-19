@@ -1,0 +1,36 @@
+## fault injection command - removing peer key of pc1 from vpn_server_1 
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be vpn_server_1 "wg set wg0 peer 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4= remove"
+
+## Configuration of wg command after removing the peer key from vpn_server_1 on both pc1
+
+1. wg config on vpn_server_1 post fault injection 
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:34292
+  allowed ips: 172.16.1.21/32
+  latest handshake: 18 minutes, 13 seconds ago
+  transfer: 12.77 KiB received, 2.39 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:51899
+  allowed ips: 172.16.1.22/32
+  latest handshake: 26 minutes, 32 seconds ago
+  transfer: 564 B received, 476 B sent
+
+2. wg config on pc1 post fault_injection
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be pc1 "wg show" 
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 58833
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 19 minutes, 30 seconds ago
+  transfer: 12.59 KiB received, 2.33 KiB sent

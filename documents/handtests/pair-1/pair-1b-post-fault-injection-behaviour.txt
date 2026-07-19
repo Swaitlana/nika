@@ -1,0 +1,20 @@
+## Ping Test
+
+1. pc1 cant ping vpn_server_1
+nika exec --session-id 20260719-093618-ef40be pc1 ping -c 3 172.16.1.1
+[TIMEOUT] Command 'ping -c 3 172.16.1.1' on 'pc1' exceeded 10.0s.
+
+2. pc1 cant ping web_server_1
+Swaitlana@MacBook-Air-2 pair-1-attempt-2 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 3 172.16.1.21                               
+[TIMEOUT] Command 'ping -c 3 172.16.1.21' on 'pc1' exceeded 10.0s.
+
+3. pc1 cant successfully curl over web server 172.16.1.21
+nika) Swaitlana@MacBook-Air-2 pair-1-attempt-2 % nika exec --session-id 20260719-093618-ef40be pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+000
+
+4. vpn_server_1 cant ping pc1 back !!
+(nika) Swaitlana@MacBook-Air-2 pair-1-attempt-2 % nika exec --session-id 20260719-093618-ef40be vpn_server_1 ping -c 3 172.16.1.11
+[TIMEOUT] Command 'ping -c 3 172.16.1.11' on 'vpn_server_1' exceeded 10.0s.
+(nika) Swaitlana@MacBook-Air-2 pair-1-attempt-2 % 
+
+

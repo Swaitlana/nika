@@ -1,0 +1,36 @@
+## Adding pc1 peer key back on vpn_server_1
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be vpn_server_1 "wg set wg0 peer 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4= allowed-ips 172.16.1.11/32 endpoint 10.0.0.2:51803"
+
+1. pings pass from pc1 to vpn_server_1
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 3 172.16.1.1 
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+64 bytes from 172.16.1.1: icmp_seq=1 ttl=64 time=2.61 ms
+64 bytes from 172.16.1.1: icmp_seq=2 ttl=64 time=2.43 ms
+64 bytes from 172.16.1.1: icmp_seq=3 ttl=64 time=2.98 ms
+
+2. pings pass from pc1 to web_server_1
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 3 172.16.1.21
+PING 172.16.1.21 (172.16.1.21) 56(84) bytes of data.
+64 bytes from 172.16.1.21: icmp_seq=1 ttl=63 time=2.40 ms
+64 bytes from 172.16.1.21: icmp_seq=2 ttl=63 time=3.89 ms
+64 bytes from 172.16.1.21: icmp_seq=3 ttl=63 time=3.06 ms
+
+--- 172.16.1.21 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2011ms
+rtt min/avg/max/mdev = 2.396/3.116/3.894/0.612 ms
+
+3. Curl Commnad from pc1 successds to web_server_1
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+200
+
+4. vpn_server_1 can ping pc1 
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260719-093618-ef40be vpn_server_1 ping -c 3 172.16.1.11 
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+64 bytes from 172.16.1.11: icmp_seq=1 ttl=64 time=0.807 ms
+64 bytes from 172.16.1.11: icmp_seq=2 ttl=64 time=2.18 ms
+64 bytes from 172.16.1.11: icmp_seq=3 ttl=64 time=2.37 ms
+
+--- 172.16.1.11 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2031ms
+rtt min/avg/max/mdev = 0.807/1.784/2.365/0.695 ms
+(nika) Swaitlana@MacBook-Air-2 nika % 
