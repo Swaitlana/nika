@@ -1,0 +1,34 @@
+---
+
+## PAIR 3 — handshake sent, never answered
+
+### Overlay: wrong peer public key on vpn_server_1
+1. Prep:    `vpn_server_1 "wg genkey | wg pubkey"` — save fake key immediately (scratch file, not evidence)
+2. Inject:  `vpn_server_1 "wg set wg0 peer 1nsFyoZ... remove"` then
+            `vpn_server_1 "wg set wg0 peer <FAKE_KEY> allowed-ips 172.16.1.11/32"`
+            (two steps — a peer's key cannot be changed in place)
+3. Confirm: `vpn_server_1 "wg show"` — real pc1 key gone, fake key present with 172.16.1.11/32,
+            web-server peers intact
+4. Wait ~2 min → fingerprint set. Fingerprint includes pc1 "wg show":
+   handshake age climbing, sent-bytes increasing, received-bytes frozen = "sent, never answered"
+5. Restore: `vpn_server_1 "wg set wg0 peer <FAKE_KEY> remove"` then
+            `vpn_server_1 "wg set wg0 peer 1nsFyoZ... allowed-ips 172.16.1.11/32"`
+            (endpoint arg optional — pc1 initiates, WireGuard roams the endpoint)
+6. Heal proof: 4 symptom tests pass + fresh handshake on pc1 wg show
+
+### Underlay: silent UDP 51820 drop at gateway_router
+1. Inject (BOTH rules — one-rule version proven non-equivalent, leaked return-path packets):
+   `gateway_router "iptables -A FORWARD -p udp -d 20.0.0.2 --dport 51820 -j DROP"`
+   `gateway_router "iptables -A FORWARD -p udp -s 20.0.0.2 --sport 51820 -j DROP"`
+2. Confirm: `gateway_router "iptables -L FORWARD -n -v"` — both rules present,
+   packet counters incrementing on the -d rule after traffic
+3. Wait ~2 min → fingerprint set (same pc1 wg show signature as overlay half;
+   note: plain routing to 20.0.0.2 still works — only UDP 51820 is dropped)
+4. Restore:
+   `gateway_router "iptables -D FORWARD -p udp -d 20.0.0.2 --dport 51820 -j DROP"`
+   `gateway_router "iptables -D FORWARD -p udp -s 20.0.0.2 --sport 51820 -j DROP"`
+5. Heal proof: iptables FORWARD chain clean + 4 symptom tests pass.
+   WireGuard retries handshake every ~5 s, so recovery is near-immediate;
+   if tunnel is not back within ~30 s, investigate — do not wait it out.
+
+---

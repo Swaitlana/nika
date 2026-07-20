@@ -1,0 +1,95 @@
+## Restoring pc1 peer on vpn_server-1
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be vpn_server_1 "wg set wg0 peer aVG5zRDhyQnRHjIsOJUQHkwystRcaFY3urjYySSUizY= remove"
+nika exec --session-id 20260719-093618-ef40be vpn_server_1 "wg set wg0 peer 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4= allowed-ips 172.16.1.11/32"
+
+## wg0 on vpn_server_1
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  endpoint: 10.0.0.2:58833
+  allowed ips: 172.16.1.11/32
+  latest handshake: 8 seconds ago
+  transfer: 532 B received, 476 B sent
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:34292
+  allowed ips: 172.16.1.21/32
+  latest handshake: 2 hours, 7 minutes, 34 seconds ago
+  transfer: 62.43 KiB received, 11.27 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:51899
+  allowed ips: 172.16.1.22/32
+  latest handshake: 9 hours, 13 minutes, 19 seconds ago
+  transfer: 564 B received, 476 B sent
+
+## wg0 on pc1
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 58833
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 48 seconds ago
+  transfer: 70.86 KiB received, 36.73 KiB sent
+(nika) Swaitlana@MacBook-Air-2 pair-3 % 
+
+1. pings from pc1 to vpn_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 3 172.16.1.1
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+64 bytes from 172.16.1.1: icmp_seq=1 ttl=64 time=0.841 ms
+64 bytes from 172.16.1.1: icmp_seq=2 ttl=64 time=2.13 ms
+64 bytes from 172.16.1.1: icmp_seq=3 ttl=64 time=2.12 ms
+
+--- 172.16.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2062ms
+rtt min/avg/max/mdev = 0.841/1.698/2.133/0.606 ms
+
+2. Curl from pc1 to web_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+200
+
+3. vpn_server_1 to pc1 pings
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be vpn_server_1 ping -c 4 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+64 bytes from 172.16.1.11: icmp_seq=1 ttl=64 time=0.801 ms
+64 bytes from 172.16.1.11: icmp_seq=2 ttl=64 time=2.22 ms
+64 bytes from 172.16.1.11: icmp_seq=3 ttl=64 time=2.22 ms
+64 bytes from 172.16.1.11: icmp_seq=4 ttl=64 time=0.923 ms
+
+--- 172.16.1.11 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3049ms
+rtt min/avg/max/mdev = 0.801/1.540/2.220/0.679 ms
+
+4. pc1 pings to vpn_server_1 underlay address - 20.0.0.2/24
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 4 20.0.0.2
+PING 20.0.0.2 (20.0.0.2) 56(84) bytes of data.
+64 bytes from 20.0.0.2: icmp_seq=1 ttl=61 time=0.561 ms
+64 bytes from 20.0.0.2: icmp_seq=2 ttl=61 time=2.15 ms
+64 bytes from 20.0.0.2: icmp_seq=3 ttl=61 time=2.26 ms
+64 bytes from 20.0.0.2: icmp_seq=4 ttl=61 time=2.04 ms
+
+--- 20.0.0.2 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3017ms
+rtt min/avg/max/mdev = 0.561/1.754/2.260/0.693 ms
+(nika) Swaitlana@MacBook-Air-2 pair-3 % 
+
+5. pc1 pings to web_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 4 172.16.1.21
+PING 172.16.1.21 (172.16.1.21) 56(84) bytes of data.
+64 bytes from 172.16.1.21: icmp_seq=1 ttl=63 time=1.16 ms
+64 bytes from 172.16.1.21: icmp_seq=2 ttl=63 time=3.62 ms
+64 bytes from 172.16.1.21: icmp_seq=3 ttl=63 time=3.09 ms
+64 bytes from 172.16.1.21: icmp_seq=4 ttl=63 time=3.72 ms
+
+--- 172.16.1.21 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3015ms
+rtt min/avg/max/mdev = 1.163/2.898/3.723/1.030 ms
+(nika) Swaitlana@MacBook-Air-2 pair-3 % 
+

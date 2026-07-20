@@ -1,0 +1,41 @@
+## Original key removal for peer pc1 on vpn_server_1
+nika exec --session-id 20260719-093618-ef40be vpn_server_1 "wg set wg0 peer 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4= remove"
+
+## Fake key injection on vpn_server_1 for pc1
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be vpn_server_1 "wg set wg0 peer aVG5zRDhyQnRHjIsOJUQHkwystRcaFY3urjYySSUizY= allowed-ips 172.16.1.11/32"
+
+## wg0 config state on pc1
+nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 58833
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 1 hour, 45 minutes, 34 seconds ago
+  transfer: 70.40 KiB received, 27.94 KiB sent
+
+## wg0 config state on vpn_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:34292
+  allowed ips: 172.16.1.21/32
+  latest handshake: 1 hour, 45 minutes, 58 seconds ago
+  transfer: 62.43 KiB received, 11.27 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:51899
+  allowed ips: 172.16.1.22/32
+  latest handshake: 8 hours, 51 minutes, 43 seconds ago
+  transfer: 564 B received, 476 B sent
+
+peer: aVG5zRDhyQnRHjIsOJUQHkwystRcaFY3urjYySSUizY=
+  allowed ips: 172.16.1.11/32
+(nika) Swaitlana@MacBook-Air-2 pair-3 % 

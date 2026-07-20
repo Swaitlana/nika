@@ -1,0 +1,99 @@
+## wg0 config state before Error Injection 
+
+1. wg0 on pc1 Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 "wg show" 
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 58833
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 1 minute, 23 seconds ago
+  transfer: 56.92 KiB received, 24.75 KiB sent
+
+
+2. wg0 on vpn_server_1
+
+  (nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be vpn_server_1 "wg show" 2>&1 | tee -a pair-3a-baseline.txt
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  endpoint: 10.0.0.2:58833
+  allowed ips: 172.16.1.11/32
+  latest handshake: 10 seconds ago
+  transfer: 10.94 KiB received, 45.89 KiB sent
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:34292
+  allowed ips: 172.16.1.21/32
+  latest handshake: 1 hour, 1 minute, 49 seconds ago
+  transfer: 50.00 KiB received, 9.07 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:51899
+  allowed ips: 172.16.1.22/32
+  latest handshake: 6 hours, 21 minutes, 56 seconds ago
+  transfer: 564 B received, 476 B sent
+
+## Ping and Curls outputs 
+
+1. pings from pc1 to vpn_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 3 172.16.1.1 2>&1 | tee -a pair-3a-baseline.txt
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+64 bytes from 172.16.1.1: icmp_seq=1 ttl=64 time=1.45 ms
+64 bytes from 172.16.1.1: icmp_seq=2 ttl=64 time=2.39 ms
+64 bytes from 172.16.1.1: icmp_seq=3 ttl=64 time=2.43 ms
+
+--- 172.16.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2010ms
+rtt min/avg/max/mdev = 1.454/2.091/2.427/0.450 ms
+(nika) Swaitlana@MacBook-Air-2 pair-3 % 
+
+2. Curl from pc1 to web_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21" 2>&1 | tee -a pair-3a-baseline.txt
+200
+(nika) Swaitlana@MacBook-Air-2 pair-3 % 
+
+3. vpn_server_1 to pc1 pings
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be vpn_server_1 ping -c 4 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+64 bytes from 172.16.1.11: icmp_seq=1 ttl=64 time=1.50 ms
+64 bytes from 172.16.1.11: icmp_seq=2 ttl=64 time=2.21 ms
+64 bytes from 172.16.1.11: icmp_seq=3 ttl=64 time=1.64 ms
+64 bytes from 172.16.1.11: icmp_seq=4 ttl=64 time=2.05 ms
+
+--- 172.16.1.11 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3013ms
+rtt min/avg/max/mdev = 1.502/1.849/2.208/0.288 ms
+(nika) Swaitlana@MacBook-Air-2 pair-3 % 
+
+4. pc1 pings to vpn_server_1 underlay address - 20.0.0.2/24
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 4 20.0.0.2
+PING 20.0.0.2 (20.0.0.2) 56(84) bytes of data.
+64 bytes from 20.0.0.2: icmp_seq=1 ttl=61 time=0.540 ms
+64 bytes from 20.0.0.2: icmp_seq=2 ttl=61 time=1.99 ms
+64 bytes from 20.0.0.2: icmp_seq=3 ttl=61 time=2.01 ms
+64 bytes from 20.0.0.2: icmp_seq=4 ttl=61 time=2.08 ms
+
+5. (nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 4 172.16.1.21
+PING 172.16.1.21 (172.16.1.21) 56(84) bytes of data.
+64 bytes from 172.16.1.21: icmp_seq=1 ttl=63 time=2.32 ms
+64 bytes from 172.16.1.21: icmp_seq=2 ttl=63 time=2.77 ms
+64 bytes from 172.16.1.21: icmp_seq=3 ttl=63 time=2.84 ms
+64 bytes from 172.16.1.21: icmp_seq=4 ttl=63 time=3.12 ms
+
+--- 172.16.1.21 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3010ms
+rtt min/avg/max/mdev = 2.317/2.762/3.119/0.288 ms
+(nika) Swaitlana@MacBook-Air-2 pair-3 % 
+
+
+
+
+
+
+

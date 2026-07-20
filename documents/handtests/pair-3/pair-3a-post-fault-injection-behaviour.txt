@@ -1,0 +1,38 @@
+## Pings and Curl tests post fault injection 
+1. Swaitlana@MacBook-Air-2 pair-3 % 
+nika exec --session-id 20260719-093618-ef40be pc1 ping -c 3 172.16.1.1
+[TIMEOUT] Command 'ping -c 3 172.16.1.1' on 'pc1' exceeded 10.0s.
+
+2. Curl from pc1 to web_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+000
+
+3. pings from vpn_server to pc1
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be vpn_server_1 ping -c 4 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+From 172.16.1.1 icmp_seq=1 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=2 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=3 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=4 Destination Host Unreachable
+
+--- 172.16.1.11 ping statistics ---
+4 packets transmitted, 0 received, +4 errors, 100% packet loss, time 3107ms
+(nika) Swaitlana@MacBook-Air-2 pair-3 % 
+
+4. pc1 pings to vpn_server_1 underlay address - 20.0.0.2/24
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 4 20.0.0.2
+PING 20.0.0.2 (20.0.0.2) 56(84) bytes of data.
+64 bytes from 20.0.0.2: icmp_seq=1 ttl=61 time=0.587 ms
+64 bytes from 20.0.0.2: icmp_seq=2 ttl=61 time=2.05 ms
+64 bytes from 20.0.0.2: icmp_seq=3 ttl=61 time=2.21 ms
+64 bytes from 20.0.0.2: icmp_seq=4 ttl=61 time=2.25 ms
+
+5. pc1 pings to web_server_1
+ Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 4 172.16.1.21
+[TIMEOUT] Command 'ping -c 4 172.16.1.21' on 'pc1' exceeded 10.0s.
+(nika) Swaitlana@MacBook-Air-2 pair-3 % 
+
+
+
+
+
