@@ -30,7 +30,38 @@ PING 20.0.0.2 (20.0.0.2) 56(84) bytes of data.
 5. pc1 pings to web_server_1
  Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 4 172.16.1.21
 [TIMEOUT] Command 'ping -c 4 172.16.1.21' on 'pc1' exceeded 10.0s.
-(nika) Swaitlana@MacBook-Air-2 pair-3 % 
+
+## pc1 wg0 state — before vs after fault (handshake frozen evidence)
+
+### Before fault injection (baseline reference)
+nika exec --session-id 20260719-093618-ef40be pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 58833
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 36 seconds ago
+  transfer: 84.79 KiB received, 40.57 KiB sent
+
+### After fault injection + failed pings
+nika exec --session-id 20260719-093618-ef40be pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 58833
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 14 minutes, 58 seconds ago
+  transfer: 84.79 KiB received, 49.24 KiB sent
+
+### Reading
+Sent advanced (40.57 -> 49.24 KiB) from ping-driven handshake retries;
+received stayed frozen at 84.79 KiB; last handshake aged from 36s to ~15min
+instead of resetting. pc1 is initiating and getting no response —
+handshake sent, never answered.
 
 
 

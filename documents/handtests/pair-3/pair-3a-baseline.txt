@@ -56,7 +56,7 @@ rtt min/avg/max/mdev = 1.454/2.091/2.427/0.450 ms
 2. Curl from pc1 to web_server_1
 (nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21" 2>&1 | tee -a pair-3a-baseline.txt
 200
-(nika) Swaitlana@MacBook-Air-2 pair-3 % 
+
 
 3. vpn_server_1 to pc1 pings
 (nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be vpn_server_1 ping -c 4 172.16.1.11
@@ -79,7 +79,8 @@ PING 20.0.0.2 (20.0.0.2) 56(84) bytes of data.
 64 bytes from 20.0.0.2: icmp_seq=3 ttl=61 time=2.01 ms
 64 bytes from 20.0.0.2: icmp_seq=4 ttl=61 time=2.08 ms
 
-5. (nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 4 172.16.1.21
+5. pc1 pings to web_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 4 172.16.1.21
 PING 172.16.1.21 (172.16.1.21) 56(84) bytes of data.
 64 bytes from 172.16.1.21: icmp_seq=1 ttl=63 time=2.32 ms
 64 bytes from 172.16.1.21: icmp_seq=2 ttl=63 time=2.77 ms
