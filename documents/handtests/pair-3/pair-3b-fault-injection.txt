@@ -1,0 +1,17 @@
+## Fault Injection Commands on gateway_router 
+1. nika exec --session-id 20260719-093618-ef40be gateway_router "iptables -A FORWARD -p udp -d 20.0.0.2 --dport 51820 -j DROP"
+2. nika exec --session-id 20260719-093618-ef40be gateway_router "iptables -A FORWARD -p udp -s 20.0.0.2 --sport 51820 -j DROP"
+
+## ACL/IP table on gateway_router after fault injection 
+3. nika exec --session-id 20260719-093618-ef40be gateway_router "iptables -L FORWARD -n -v"
+Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+    2   312 DROP       17   --  *      *       0.0.0.0/0            20.0.0.2             udp dpt:51820
+    0     0 DROP       17   --  *      *       20.0.0.2             0.0.0.0/0            udp spt:51820
+
+## Ping Failures 
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 3 172.16.1.1
+[TIMEOUT] Command 'ping -c 3 172.16.1.1' on 'pc1' exceeded 10.0s.
+(nika) Swaitlana@MacBook-Air-2 pair-3 % 
+
+

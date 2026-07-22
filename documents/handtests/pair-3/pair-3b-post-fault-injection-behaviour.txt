@@ -1,0 +1,69 @@
+## Pings and Curls tests 
+1. wg0 on pc1 
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 58833
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 18 minutes, 50 seconds ago
+  transfer: 2.05 MiB received, 2.07 MiB sent
+
+2. pc1 pings to vpn_server_1 overlay address
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 3 172.16.1.1
+[TIMEOUT] Command 'ping -c 3 172.16.1.1' on 'pc1' exceeded 10.0s.
+(nika) Swaitlana@MacBook-Air-2 pair-3 % 
+
+3. curl to web_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+000
+
+4. pings from vpn_server_1 to pc1 overlay address 
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be vpn_server_1 ping -c 4 172.16.1.11
+[TIMEOUT] Command 'ping -c 4 172.16.1.11' on 'vpn_server_1' exceeded 10.0s.
+
+5. pc1 pings to vpn_server underlay 
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 4 20.0.0.2
+PING 20.0.0.2 (20.0.0.2) 56(84) bytes of data.
+64 bytes from 20.0.0.2: icmp_seq=1 ttl=61 time=0.632 ms
+64 bytes from 20.0.0.2: icmp_seq=2 ttl=61 time=0.484 ms
+64 bytes from 20.0.0.2: icmp_seq=3 ttl=61 time=2.11 ms
+64 bytes from 20.0.0.2: icmp_seq=4 ttl=61 time=2.14 ms
+
+--- 20.0.0.2 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3055ms
+rtt min/avg/max/mdev = 0.484/1.342/2.140/0.785 ms
+(nika) Swaitlana@MacBook-Air-2 pair-3 % 
+
+6. pc1 pings to web_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 4 172.16.1.21
+[TIMEOUT] Command 'ping -c 4 172.16.1.21' on 'pc1' exceeded 10.0s.
+
+## pc1 handshake frozen — before vs after a forced (failed) ping
+
+1. Handshake timestamps immediately after fault injection
+nika exec --session-id 20260719-093618-ef40be vpn_server_1 "wg show wg0 latest-handshakes"
+WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=    1784610706
+eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=    1784478974
+1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=    1784694025
+
+2. Forced handshake attempt (ping from pc1 — fails)
+nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be pc1 ping -c 4 172.16.1.21                   
+[TIMEOUT] Command 'ping -c 4 172.16.1.21' on 'pc1' exceeded 10.0s.
+3. Forced handshake attempt vpn_server_1 pings pc1 
+(nika) Swaitlana@MacBook-Air-2 pair-3 % nika exec --session-id 20260719-093618-ef40be vpn_server_1 ping -c 4 172.16.1.11       
+[TIMEOUT] Command 'ping -c 4 172.16.1.11' on 'vpn_server_1' exceeded 10.0s.
+
+4. Handshake timestamps after the failed ping (The last row - 1784694025 frozen)
+nika exec --session-id 20260719-093618-ef40be vpn_server_1 "wg show wg0 latest-handshakes"
+WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=    1784610706
+eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=    1784478974
+1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=    1784694025
+
+### Reading
+pc1's last-handshake timestamp (1784694025) is identical before and after a
+forced ping that failed. pc1 attempted to re-handshake and got no response —
+handshake sent, never answered. UDP 51820 is dropped at gateway_router in both
+directions, so the tunnel is dead while the underlay path stays reachable
