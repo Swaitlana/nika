@@ -1,0 +1,143 @@
+## Core 5 tests 
+1. pc1 pingsing vpn_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b pc1 ping -c 3 172.16.1.1
+[TIMEOUT] Command 'ping -c 3 172.16.1.1' on 'pc1' exceeded 10.0s.
+
+2. curl frpm pc1 to vpn_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+000
+
+3. vpn_server_1 pings pc1
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b vpn_server_1 ping -c 4 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+From 172.16.1.1 icmp_seq=1 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=2 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=3 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=4 Destination Host Unreachable
+
+--- 172.16.1.11 ping statistics ---
+4 packets transmitted, 0 received, +4 errors, 100% packet loss, time 3089ms
+
+4. pc1 pings underlay ip of vpn_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b pc1 ping -c 4 20.0.0.2
+PING 20.0.0.2 (20.0.0.2) 56(84) bytes of data.
+64 bytes from 20.0.0.2: icmp_seq=1 ttl=61 time=0.580 ms
+64 bytes from 20.0.0.2: icmp_seq=2 ttl=61 time=2.08 ms
+64 bytes from 20.0.0.2: icmp_seq=3 ttl=61 time=2.08 ms
+64 bytes from 20.0.0.2: icmp_seq=4 ttl=61 time=2.03 ms
+
+--- 20.0.0.2 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3046ms
+rtt min/avg/max/mdev = 0.580/1.692/2.083/0.642 ms
+
+5. pc1 pings web_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b pc1 ping -c 4 172.16.1.21
+[TIMEOUT] Command 'ping -c 4 172.16.1.21' on 'pc1' exceeded 10.0s.
+
+### Fault injection specific Tests
+
+1. pc1 pings fake peer ip 20.0.0.5
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b pc1 ping -c 4 20.0.0.5
+
+PING 20.0.0.5 (20.0.0.5) 56(84) bytes of data.
+From 192.168.0.6 icmp_seq=1 Destination Host Unreachable
+From 192.168.0.6 icmp_seq=2 Destination Host Unreachable
+From 192.168.0.6 icmp_seq=3 Destination Host Unreachable
+From 192.168.0.6 icmp_seq=4 Destination Host Unreachable
+
+--- 20.0.0.5 ping statistics ---
+4 packets transmitted, 0 received, +4 errors, 100% packet loss, time 3073ms
+pipe 4
+
+2. pc1 traceroute 20.0.0.5
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b pc1 traceroute -n -q 1 -w 1 20.0.0.5
+traceroute to 20.0.0.5 (20.0.0.5), 30 hops max, 60 byte packets
+ 1  10.0.0.1  0.362 ms
+ 2  192.168.0.3  0.457 ms
+ 3  192.168.0.6  0.784 ms
+ 4  *
+ 5  *
+ 6  *
+ 7  *
+ 8  *
+ 9  *
+10  *
+11  *
+12  *
+13  *
+14  *
+15  *
+16  *
+17  *
+18  *
+19  *
+20  *
+21  *
+22  *
+23  *
+24  *
+25  *
+26  *
+27  *
+28  *
+29  *
+30  *
+
+3. external_router show ip neighbour 
+
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b external_router_1 "ip neigh show"
+20.0.0.2 dev br0 lladdr 3a:06:0e:80:7b:f0 STALE 
+20.0.0.5 dev br0 FAILED 
+192.168.0.7 dev eth0 lladdr 5a:f8:ad:88:00:aa STALE
+(nika) Swaitlana@MacBook-Air-2 pair-6 % 
+
+## handshake signature runs
+
+1. pc1 latest handshakes
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b pc1 "wg show wg0 latest-handshakes"
+
+pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=    1785112964
+
+2. vpn_server_1 latest handshake 
+nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b vpn_server_1 "wg show wg0 latest-handshakes"
+WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=    1785112964
+eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=    1785106147
+1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=    0
+
+3. pc1 wg show 
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 40914
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.5:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 3 days, 12 hours, 46 minutes, 40 seconds ago
+  transfer: 13.43 KiB received, 10.65 KiB sent
+
+4. vpn_server_1 wg file :
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:56998
+  allowed ips: 172.16.1.21/32
+  latest handshake: 3 days, 12 hours, 46 minutes, 53 seconds ago
+  transfer: 12.98 KiB received, 2.66 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:57684
+  allowed ips: 172.16.1.22/32
+  latest handshake: 3 days, 14 hours, 40 minutes, 30 seconds ago
+  transfer: 564 B received, 476 B sent
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  allowed ips: 172.16.1.11/32
+
+
+

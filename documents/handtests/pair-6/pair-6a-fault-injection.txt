@@ -1,0 +1,64 @@
+## Commands for fault injection:
+1. Point pc1's server-peer endpoint at 20.0.0.5
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b pc1 "wg set wg0 peer pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA= endpoint 20.0.0.5:51820"
+
+2. clears the learned endpoint — no wg set option removes one, so remove/re-add is the only way
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b vpn_server_1 "wg set wg0 peer 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4= remove"
+
+3. Adding pc1 as a new peer on vpn_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b vpn_server_1 "wg set wg0 peer 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4= allowed-ips 172.16.1.11/32"
+
+## Verifying fault injection 
+
+1. peer on pc1 changed to 20.0.0.5
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 40914
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.5:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 2 days, 12 hours, 39 minutes, 50 seconds ago
+  transfer: 13.43 KiB received, 3.28 KiB sent
+
+2. no handshakes or endpoint info on vpn_server_1 
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:56998
+  allowed ips: 172.16.1.21/32
+  latest handshake: 2 days, 12 hours, 40 minutes, 12 seconds ago
+  transfer: 12.98 KiB received, 2.66 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:57684
+  allowed ips: 172.16.1.22/32
+  latest handshake: 2 days, 14 hours, 33 minutes, 49 seconds ago
+  transfer: 564 B received, 476 B sent
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  allowed ips: 172.16.1.11/32
+
+## Epoch check post-injection: pc1 frozen at 1785112964 (baseline value, must not advance); server's pc1 peer reset to 0 — proof the peer wipe was complete and the server cannot initiate.
+
+1. pc1 latest handshakes post fault injection
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b pc1 "wg show wg0 latest-handshakes"
+pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=    1785112964
+
+2. vpn_server_latest handshakes post fault injection 
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b vpn_server_1 "wg show wg0 latest-handshakes"
+WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=    1785112964
+eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=    1785106147
+1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=    0
+(nika) Swaitlana@MacBook-Air-2 pair-6 % 
+
+
+
+
+

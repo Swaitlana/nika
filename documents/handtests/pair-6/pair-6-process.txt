@@ -1,0 +1,5 @@
+## No handshake; endpoint silent
+ Overlay - Wrong endpoint IP in client's wg config
+ Underlay - Server's public interface IP misconfigured 
+## Note for 6a
+6a's core-five fingerprint is identical to 3a's (tunnel dead, underlay alive). The discriminator is pc1's configured endpoint (20.0.0.5 vs 20.0.0.2) plus the server's peer key, both visible in wg show — exposed by get_tunnel_status in FINE and check_overlay in COARSE.
