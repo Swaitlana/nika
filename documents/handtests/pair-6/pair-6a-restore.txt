@@ -1,7 +1,7 @@
 ## Restore command 
 (nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260726-154911-f05b7b pc1 "wg set wg0 peer pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA= endpoint 20.0.0.2:51820"
 
-##Ping and Curl commands
+## Ping and Curl commands
 
 1. Pc1 pings to vpn_server_1
 (nika)Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260726-154911-f05b7b pc1 ping -c 3 172.16.1.1

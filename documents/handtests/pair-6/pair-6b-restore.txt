@@ -1,0 +1,133 @@
+## Commands to restore 
+nika exec --session-id 20260802-154850-279df0 vpn_server_1 "ip addr del 20.0.0.5/24 dev eth0"
+nika exec --session-id 20260802-154850-279df0 vpn_server_1 "ip addr add 20.0.0.2/24 dev eth0"
+nika exec --session-id 20260802-154850-279df0 vpn_server_1 "ip route add default via 20.0.0.1 dev eth0"
+
+## Verify Restore after 
+
+1. show eth0 on vpn_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "ip addr show eth0"
+108: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 22:e2:49:a8:b5:45 brd ff:ff:ff:ff:ff:ff
+    inet 20.0.0.2/24 scope global eth0
+       valid_lft forever preferred_lft forever
+
+2. show ip route on vpn_server_1      
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "ip route show"
+default via 20.0.0.1 dev eth0 
+20.0.0.0/24 dev eth0 proto kernel scope link src 20.0.0.2 
+172.16.1.0/24 dev wg0 proto kernel scope link src 172.16.1.1
+
+## Ping and Curl commands 
+
+1. Pc1 pings to vpn_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 pc1 ping -c 3 172.16.1.1
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+64 bytes from 172.16.1.1: icmp_seq=1 ttl=64 time=1.92 ms
+64 bytes from 172.16.1.1: icmp_seq=2 ttl=64 time=2.24 ms
+64 bytes from 172.16.1.1: icmp_seq=3 ttl=64 time=2.45 ms
+
+--- 172.16.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2013ms
+rtt min/avg/max/mdev = 1.915/2.199/2.448/0.219 ms
+
+2. pc1 curls to web_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+200
+
+3. vpn_server pings pc1 overlay
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 ping -c 3 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+64 bytes from 172.16.1.11: icmp_seq=1 ttl=64 time=0.664 ms
+64 bytes from 172.16.1.11: icmp_seq=2 ttl=64 time=2.17 ms
+64 bytes from 172.16.1.11: icmp_seq=3 ttl=64 time=2.88 ms
+
+--- 172.16.1.11 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2006ms
+rtt min/avg/max/mdev = 0.664/1.901/2.875/0.921 ms
+
+4. pc1 pings underlay vpn_server_1 underlay 
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 pc1 ping -c 3 20.0.0.2
+PING 20.0.0.2 (20.0.0.2) 56(84) bytes of data.
+64 bytes from 20.0.0.2: icmp_seq=1 ttl=61 time=0.608 ms
+64 bytes from 20.0.0.2: icmp_seq=2 ttl=61 time=2.25 ms
+64 bytes from 20.0.0.2: icmp_seq=3 ttl=61 time=2.28 ms
+
+--- 20.0.0.2 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2045ms
+rtt min/avg/max/mdev = 0.608/1.713/2.282/0.781 ms
+
+5. pc1 pings web_server_1
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 pc1 ping -c 3 172.16.1.21
+PING 172.16.1.21 (172.16.1.21) 56(84) bytes of data.
+64 bytes from 172.16.1.21: icmp_seq=1 ttl=63 time=1.18 ms
+64 bytes from 172.16.1.21: icmp_seq=2 ttl=63 time=3.47 ms
+64 bytes from 172.16.1.21: icmp_seq=3 ttl=63 time=2.44 ms
+
+--- 172.16.1.21 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2008ms
+rtt min/avg/max/mdev = 1.180/2.364/3.469/0.936 ms
+
+## Handshakes and tunnels 
+
+1. wg0 on pc1
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 40379
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 4 minutes, 34 seconds ago
+  transfer: 27.35 KiB received, 15.76 KiB sent
+
+2. pc1 latest handshakes 
+
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 pc1 "wg show wg0 latest-handshakes"
+pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=    1785773320
+
+3. vpn_server_1 wg show 
+
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:50753
+  allowed ips: 172.16.1.21/32
+  latest handshake: 4 minutes, 51 seconds ago
+  transfer: 25.20 KiB received, 4.59 KiB sent
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  endpoint: 10.0.0.2:40379
+  allowed ips: 172.16.1.11/32
+  latest handshake: 5 minutes, 7 seconds ago
+  transfer: 2.71 KiB received, 13.00 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:47598
+  allowed ips: 172.16.1.22/32
+  latest handshake: 17 hours, 25 minutes, 1 second ago
+  transfer: 564 B received, 476 B sent
+
+4. vpn_server_1 latest handshakes  
+
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "wg show wg0 latest-handshakes"
+WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=    1785773336
+eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=    1785710926
+1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=    1785773320
+
+5. Show ip neighbour command on external_router
+
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 external_router_1 "ip neigh show"
+20.0.0.5 dev br0 lladdr 22:e2:49:a8:b5:45 STALE 
+20.0.0.2 dev br0 lladdr 22:e2:49:a8:b5:45 STALE 
+192.168.0.7 dev eth0 lladdr e2:cc:f4:a3:92:2e STALE
+
+
+
+

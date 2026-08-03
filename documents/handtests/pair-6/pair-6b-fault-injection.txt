@@ -1,0 +1,136 @@
+
+Session:  20260802-154850-279df0
+Scenario: rip_small_internet_vpn --tier s
+Host:     vpn_server_1
+Fault:    eth0 address moved 20.0.0.2/24 -> 20.0.0.5/24 (underlay half of pair 6)
+
+Pair 6 shared symptom: "no handshake; endpoint silent".
+6a (overlay half) points pc1's server-peer endpoint at 20.0.0.5:51820, an
+unassigned address. 6b (this half) moves the server itself to 20.0.0.5/24 while
+pc1's config still points at 20.0.0.2:51820. Same two addresses, swapped sides.
+
+
+## FINDING: add-before-delete does NOT protect the default route on a same-subnet swap
+
+The planned procedure was "add .5 before deleting .2" so the connected route
+would never disappear and the default via 20.0.0.1 would survive. That is wrong
+for a swap within the same subnet.
+
+Adding 20.0.0.5/24 while 20.0.0.2/24 is present makes .5 a SECONDARY address on
+the 20.0.0.0/24 subnet. With the Linux default
+net.ipv4.conf.eth0.promote_secondaries=0, deleting the primary address also
+deletes every secondary on that subnet. Both addresses were removed, eth0 was
+left with no inet address, the connected 20.0.0.0/24 route vanished, and the
+explicit default via 20.0.0.1 went with it.
+
+Corrected procedure (order is irrelevant; re-adding the default is mandatory):
+    ip addr del 20.0.0.2/24 dev eth0
+    ip addr add 20.0.0.5/24 dev eth0
+    ip route add default via 20.0.0.1 dev eth0
+
+The same might apply with restore
+## 1. First attempt - add before delete (left eth0 with no address)
+
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "ip addr add 20.0.0.5/24 dev eth0"
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "ip addr del 20.0.0.2/24 dev eth0"
+
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "ip route show"
+172.16.1.0/24 dev wg0 proto kernel scope link src 172.16.1.1
+
+  -> default route gone, connected 20.0.0.0/24 route gone
+
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "ip addr show eth0"
+108: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 22:e2:49:a8:b5:45 brd ff:ff:ff:ff:ff:ff
+
+  -> no inet line: eth0 has no address at all
+
+
+## 2. Re-add the fault address
+
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "ip addr add 20.0.0.5/24 dev eth0"
+
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "ip route show"
+20.0.0.0/24 dev eth0 proto kernel scope link src 20.0.0.5 
+172.16.1.0/24 dev wg0 proto kernel scope link src 172.16.1.1
+
+  -> connected route returns automatically with src 20.0.0.5; default still absent
+
+
+## 3. Restore the default route explicitly
+
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "ip route add default via 20.0.0.1 dev eth0"
+
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "ip route show"
+default via 20.0.0.1 dev eth0 
+20.0.0.0/24 dev eth0 proto kernel scope link src 20.0.0.5 
+172.16.1.0/24 dev wg0 proto kernel scope link src 172.16.1.1
+
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "ip addr show eth0"
+108: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 22:e2:49:a8:b5:45 brd ff:ff:ff:ff:ff:ff
+    inet 20.0.0.5/24 scope global eth0
+       valid_lft forever preferred_lft forever
+
+  -> address state reached: eth0 holds only 20.0.0.5/24, routing table matches
+     baseline except src 20.0.0.2 -> src 20.0.0.5
+
+
+## 4. Clear the learned endpoint for pc1 on vpn_server_1
+
+Baseline hand-testing taught the server pc1's endpoint (10.0.0.2:40379) and
+learned endpoints never expire. There is no wg set option to clear one, so
+remove + re-add is the only way. NIKA's automated pipeline injects into a cold
+lab where pc1 has never sent traffic, so this restores the state the agent
+actually sees. This is part of the injection, not a workaround.
+
+wg set returns silently on success - no output is the expected result.
+
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "wg set wg0 peer 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4= remove"
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "wg set wg0 peer 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4= allowed-ips 172.16.1.11/32"
+
+
+## 5. Verify injection
+
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:50753
+  allowed ips: 172.16.1.21/32
+  latest handshake: 13 hours, 54 minutes ago
+  transfer: 12.98 KiB received, 2.66 KiB sent
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:47598
+  allowed ips: 172.16.1.22/32
+  latest handshake: 15 hours, 42 minutes, 43 seconds ago
+  transfer: 564 B received, 476 B sent
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  allowed ips: 172.16.1.11/32
+
+  -> pc1's peer: allowed-ips only. No endpoint, no handshake, no transfer.
+     Matches the cold pre-traffic capture in pair-6b-baseline.txt.
+     The two web-server peers keep their endpoints and counters, confirming the
+     remove/re-add touched only the intended peer.
+
+(nika) Swaitlana@MacBook-Air-2 pair-6 % nika exec --session-id 20260802-154850-279df0 vpn_server_1 "wg show wg0 latest-handshakes"
+WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=    1785717449
+eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=    1785710926
+1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=    0
+
+  -> pc1 epoch 0 = never handshaked. Cold state confirmed.
+
+
+## Injection complete - fault in place
+
+Two changes on vpn_server_1:
+  1. eth0: 20.0.0.2/24 -> 20.0.0.5/24 (default route re-added by hand)
+  2. pc1 peer removed and re-added to clear the learned endpoint
+
+pc1 is untouched and still points at 20.0.0.2:51820.
+
+Note: the WlmcLCe6 epoch reads 1785717449 here but 1785710926 in the cold
+pre-traffic baseline. web_server_1 re-handshaked during the baseline curl and
+ping tests. Expected, unrelated to this fault.

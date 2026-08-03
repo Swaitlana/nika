@@ -3,3 +3,79 @@
  Underlay - Server's public interface IP misconfigured 
 ## Note for 6a
 6a's core-five fingerprint is identical to 3a's (tunnel dead, underlay alive). The discriminator is pc1's configured endpoint (20.0.0.5 vs 20.0.0.2) plus the server's peer key, both visible in wg show — exposed by get_tunnel_status in FINE and check_overlay in COARSE.
+
+## OPEN ITEM 1 — Pair 6 is not strictly symptom-identical at the tunnel layer
+
+Design rule for confusable pairs: viewed only from the tunnel layer, both halves
+must look identical; the difference must be visible only by inspecting the layer
+below.
+
+Pair 6 does not fully satisfy this. pc1's `wg show` differs between halves:
+
+    6a:  endpoint: 20.0.0.5:51820
+    6b:  endpoint: 20.0.0.2:51820
+
+That is a tunnel-layer view, and it differs. The core five still match on tests
+1, 2, 3 and 5, so the confusability criterion (tests 1-3 identical) holds, but
+the wg-level view is not identical.
+
+Argument that the pair is still valid: the differing field is not
+self-interpreting. Seeing 20.0.0.2 does not tell you the server has moved away
+from it. Seeing 20.0.0.5 does not tell you that address is wrong. To decide
+which address is correct, the agent must check what the server actually holds -
+an underlay check. Crossing the layer boundary is still required for a correct
+answer. What is visible from above is only the TRIGGER to go looking, not the
+answer.
+
+Action: state this explicitly in the write-up rather than leaving it for a
+reviewer to find. Frame it as a property of the pair, not a defect: the agent
+gets a hint that something is wrong with the endpoint, but cannot resolve which
+side is at fault without crossing layers.
+
+Open question: does the same hint exist in other pairs, or is pair 6 unusual
+because both halves manipulate the same two addresses on opposite sides? Check
+pairs 1 and 3 when revisiting.
+
+
+## OPEN ITEM 2 — Discrimination at Phase 4/5 is 4-way, not 2-way
+
+The pairwise design framing ("two look-alike causes, tell them apart") does not
+match how NIKA scores. The agent submits a root-cause name chosen from
+list_avail_problems(), which returns every registered problem - not just the two
+halves of the pair under test. Exact match against ground truth follows.
+
+Core-five fingerprint TIMEOUT / 000 / Destination Host Unreachable / TIMEOUT is
+shared by:
+    1a  peer deleted from server's wg config      [ASSERTED - not yet verified
+                                                   against committed pair-1 files]
+    3a  wrong peer public key                     [VERIFIED line-for-line vs 6a]
+    6a  wrong endpoint IP in pc1's wg config      [VERIFIED]
+    6b  server's eth0 address moved               [VERIFIED this session]
+
+So a 6b incident presents at least four registered names consistent with the
+standard tests.
+
+Consequences:
+
+1. Chance accuracy is nearer 25% than 50%. Do not report results against an
+   implied coin-flip baseline.
+
+2. Two very different failures score identically under 1/0. Answering "3a" when
+   ground truth is "6a" means the agent DID cross the layer boundary and
+   identified an overlay cause, just the wrong one. Answering "6a" when ground
+   truth is "6b" means it did not cross at all. Opposite meanings for the
+   construct under test, same score.
+
+3. Fix is in reporting, not design. Log WHICH wrong name was submitted, not just
+   pass/fail. A confusion matrix over the candidate set separates "wrong layer"
+   from "right layer, wrong cause". Submissions are already saved, so this costs
+   nothing extra.
+
+Does NOT affect fairness between conditions: the discriminators (pc1's
+configured endpoint, the server's peer key, the ARP table on external_router_1)
+are reachable via get_tunnel_status in FINE and check_overlay in COARSE. The
+task is harder than the pairwise framing implies, but equally harder in both
+conditions, so the granularity comparison holds.
+
+Action: carry into Phase 6 analysis plan. Verify the 1a claim when next opening
+pair-1.
