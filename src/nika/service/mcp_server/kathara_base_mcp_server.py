@@ -75,7 +75,7 @@ def get_host_net_config(host_name: str) -> dict:
 
 
 @safe_tool
-@mcp.tool()
+##@mcp.tool() Disabled for this study
 def get_tc_statistics(host_name: str, intf_name: str) -> str:
     """Get the traffic control (tc) statistics of a specific interface on a host.
 
@@ -125,7 +125,7 @@ def ip_addr_statistics(host_name: str) -> str:
 
 
 @safe_tool
-@mcp.tool()
+##@mcp.tool() Disabled for this study 
 def ethtool(host_name: str, interface: str, args: str) -> str:
     """Run ethtool command on a host's interface with given arguments.
 
@@ -161,7 +161,7 @@ def curl_web_test(host_name: str, url: str, times: int = 5) -> str:
 
 
 @safe_tool
-@mcp.tool()
+##@mcp.tool() - ##unregistered for this study
 def iperf_test(
     client_host_name: str,
     server_host_name: str,

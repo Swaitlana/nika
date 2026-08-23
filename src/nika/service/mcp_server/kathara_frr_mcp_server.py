@@ -9,7 +9,7 @@ mcp = FastMCP("kathara_bmv2_mcp_server")
 
 
 @safe_tool
-@mcp.tool()
+##@mcp.tool() Disabled for this study
 def frr_get_bgp_conf(router_name: str) -> str:
     """Get the BGP configuration from the FRR router.
 
@@ -52,7 +52,7 @@ def frr_show_ip_route(router_name: str) -> str:
 
 
 @safe_tool
-@mcp.tool()
+##@mcp.tool() Disabled for this study
 def frr_get_ospf_conf(router_name: str) -> str:
     """Get the OSPF configuration from the FRR router.
 
