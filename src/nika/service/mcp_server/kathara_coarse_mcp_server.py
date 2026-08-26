@@ -8,7 +8,7 @@ health (per-layer rollups rather than raw commands):
 
     - check_overlay   : WireGuard tunnel state across every VPN endpoint
     - check_underlay  : RIP/FRR routing state across every router
-    - check_endpoint  : reachability, per-host net config, and an app-layer web test
+    - check_endpoint  : reachability, host config, sockets, counters, web test
 
 Each aggregate bundles exactly the atomic calls that make up its layer in the
 FINE condition, so the two conditions remain information-matched (Phase 3).
@@ -19,10 +19,8 @@ Controls preserved from the experiment design:
     - The underlay bundle (_RIP_EXEC_CMDS plus the two named FRR calls) MUST
       stay equal to the FINE frr surface; keep them in sync.
 
-NOTE: This file is structurally compatible with the existing servers. Task 3
-will register "kathara_coarse_mcp_server" in MCPServerConfig.load_config and
-add the TOOL_GRANULARITY switch in select_diagnosis_servers; until then this
-server is not yet wired into the pipeline.
+The server is wired: select_diagnosis_servers returns this server alone when
+TOOL_GRANULARITY=coarse, and the atomic base/frr servers are not loaded.
 """
 
 from mcp.server.fastmcp import FastMCP
@@ -126,28 +124,33 @@ def check_underlay() -> str:
 @safe_tool
 @mcp.tool()
 async def check_endpoint() -> str:
-    """ENDPOINT health rollup: reachability, host net config, and web reachability.
+    """ENDPOINT health rollup: reachability, host config, sockets, counters, web.
 
     Bundles the symptom-layer atomic checks:
       - all-pairs reachability matrix     (get_reachability)
       - per-host network config           (get_host_net_config) for each endpoint
+      - listening sockets                 (netstat -tuln) for every node
+      - per-interface counters            (ip -s addr) for every node
       - application-layer web test: each internal client curls each web service
         over the VPN tunnel (curl_web_test to the web server's inner tunnel IP)
 
     The all-pairs matrix subsumes targeted ping_pair information, so ping_pair
     is not separately bundled.
 
-    DESIGN DECISION (confirm before locking the experiment): the web test loops
-    client x web-server and curls each web service over the tunnel. This is the
-    superset choice for the Phase 3 fairness diff. To instead bake in a single
-    fixed curl, edit the web-test loop below.
+    Sockets and counters are bundled to match FINE's netstat and
+    ip_addr_statistics tools, both of which accept any node name including
+    routers. Both conditions therefore expose the same surface (Phase 3).
+
+    DESIGN DECISION (confirmed): the web test loops client x web-server and
+    curls each web service over the tunnel. This is the superset choice.
 
     Returns:
         str: Endpoint diagnostics, labelled per section.
     """
     kathara_api = KatharaAPI(lab_name=get_lab_name())
-    _, vpn_hosts, client_hosts, web_hosts = _discover_nodes(kathara_api)
+    routers, vpn_hosts, client_hosts, web_hosts = _discover_nodes(kathara_api)
     endpoint_hosts = vpn_hosts + client_hosts + web_hosts
+    all_nodes = endpoint_hosts + routers
 
     sections = []
 
@@ -159,6 +162,17 @@ async def check_endpoint() -> str:
     for host in endpoint_hosts:
         cfg = kathara_api.get_host_net_config(host_name=host)
         sections.append(f"===== {host} : net config =====\n{cfg}")
+
+    # 2b) listening sockets (matches FINE's netstat tool, callable on any node)
+    for node in all_nodes:
+        sock = kathara_api.netstat(host_name=node)
+        sections.append(f"===== {node} : netstat -tuln =====\n{sock}")
+
+    # 2c) per-interface counters (matches FINE's ip_addr_statistics tool,
+    #     also callable on any node)
+    for node in all_nodes:
+        stats = kathara_api.ip_addr_statistics(host_name=node)
+        sections.append(f"===== {node} : ip -s addr =====\n{stats}")
 
     # 3) application-layer web test over the tunnel
     for web in web_hosts:
@@ -177,7 +191,6 @@ async def check_endpoint() -> str:
             sections.append(f"===== {client} -> {web} ({url}) =====\n{out}")
 
     return "\n\n".join(sections) if sections else "No endpoint information found."
-
 
 if __name__ == "__main__":
     # Initialize and run the server
