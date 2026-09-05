@@ -1,0 +1,155 @@
+1. pc1 pings to vpn_server1
+
+nika exec --session-id 20260829-111205-d8233d --timeout 20 pc1 ping -c 10 172.16.1.1
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+
+--- 172.16.1.1 ping statistics ---
+10 packets transmitted, 0 received, 100% packet loss, time 9214ms
+
+2. wg0 on pc1
+
+nika exec --session-id 20260829-111205-d8233d pc1 wg show
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 60011
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 8 hours, 44 minutes, 7 seconds ago
+  transfer: 7.02 KiB received, 11.47 KiB sent
+
+3. wg0 on vpn_server_1
+
+nika exec --session-id 20260829-111205-d8233d vpn_server_1 wg show
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  endpoint: 10.0.0.2:60011
+  allowed ips: 172.16.1.11/32
+  latest handshake: 8 hours, 44 minutes, 8 seconds ago
+  transfer: 7.28 KiB received, 7.02 KiB sent
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:36303
+  allowed ips: 172.16.1.21/32
+  latest handshake: 9 hours, 31 minutes, 44 seconds ago
+  transfer: 564 B received, 476 B sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:50517
+  allowed ips: 172.16.1.22/32
+  latest handshake: 9 hours, 31 minutes, 44 seconds ago
+  transfer: 564 B received, 476 B sent
+
+4. gateway_router netstat dump
+
+nika exec --session-id 20260829-111205-d8233d gateway_router netstat -tunap -4
+Active Internet connections (servers and established)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
+tcp        0      0 127.0.0.1:2616          0.0.0.0:*               LISTEN      -                   
+tcp        0      0 127.0.0.1:2602          0.0.0.0:*               LISTEN      -                   
+tcp        0      0 127.0.0.1:2601          0.0.0.0:*               LISTEN      -                   
+tcp        0      0 127.0.0.11:37715        0.0.0.0:*               LISTEN      -                   
+tcp        0      0 0.0.0.0:2623            0.0.0.0:*               LISTEN      -                   
+udp        0      0 127.0.0.11:37035        0.0.0.0:*                           -                   
+udp        0      0 0.0.0.0:520             0.0.0.0:*                           -
+
+5. ip addr command on vpn_server_1 on wg0
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260829-111205-d8233d vpn_server_1 ip -4 -s addr show wg0
+11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000
+    inet 172.16.1.1/24 scope global wg0
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+          8580      70      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+         11248      86      0      10       0       0
+
+
+
+6. netstat on vpn_server_1
+
+nika exec --session-id 20260829-111205-d8233d vpn_server_1 netstat -tunap -4
+Active Internet connections (servers and established)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
+tcp        0      0 127.0.0.11:33939        0.0.0.0:*               LISTEN      -                   
+udp        0      0 127.0.0.11:48861        0.0.0.0:*                           -                   
+udp        0      0 0.0.0.0:51820           0.0.0.0:*                           -
+
+7. ip addr on pc1 for wg0
+
+nika exec --session-id 20260829-111205-d8233d pc1 ip -4 -s addr show wg0
+11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000
+    inet 172.16.1.11/24 scope global wg0
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+          7188      57      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+         11892      90      0      20       0       0
+
+8. netstat on pc1
+
+nika exec --session-id 20260829-111205-d8233d pc1 netstat -tunap -4
+Active Internet connections (servers and established)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
+tcp        0      0 127.0.0.11:37137        0.0.0.0:*               LISTEN      -                   
+udp        0      0 0.0.0.0:60011           0.0.0.0:*                           -                   
+udp        0      0 127.0.0.11:36187        0.0.0.0:*                           -
+
+9. ip addr on gateway_router for ip4 interfaces only
+
+nika exec gateway_router ip -4 -s addr show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+61: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    inet 192.168.0.3/31 scope global eth0
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+         54126     405      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+         47706     371      0       0       0       0 
+65: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    inet 192.168.0.5/31 scope global eth1
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+         37714     302      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+         43518     301      0       0       0       0 
+68: eth2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    inet 192.168.0.7/31 scope global eth2
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+         29904     366      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+         54034     371      0       0       0       0
+
+10. pc1 latest handshake on wg0
+
+nika exec --session-id 20260829-111205-d8233d pc1 wg show wg0 latest-handshakes
+pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=	1788029977
+
+11. vpn_server_1 pings to pc1
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260829-111205-d8233d --timeout 20 vpn_server_1 ping -c 10 172.16.1.11 
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+
+--- 172.16.1.11 ping statistics ---
+10 packets transmitted, 0 received, 100% packet loss, time 9202ms
+
+12. Router table on gateway router post fault injection 
+
+(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260829-111205-d8233d gateway_router iptables -L FORWARD -n -v
+Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+   68 11968 DROP       17   --  *      *       0.0.0.0/0            20.0.0.2             udp dpt:51820
+    7  1232 DROP       17   --  *      *       20.0.0.2             0.0.0.0/0            udp spt:51820
+(nika) Swaitlana@MacBook-Air-2 nika % 
+

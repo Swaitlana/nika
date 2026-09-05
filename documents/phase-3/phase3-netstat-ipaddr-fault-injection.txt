@@ -1,0 +1,26 @@
+1. fault injection - drop wireguard UDP traffic to/from vpn_server_1 at gateway_router
+
+nika exec gateway_router iptables -A FORWARD -d 20.0.0.2 -p udp --dport 51820 -j DROP
+
+nika exec gateway_router iptables -A FORWARD -s 20.0.0.2 -p udp --sport 51820 -j DROP
+
+
+2. verify fault landed on the router
+
+nika exec gateway_router iptables -L FORWARD -n -v
+Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 DROP       17   --  *      *       0.0.0.0/0            20.0.0.2             udp dpt:51820
+    0     0 DROP       17   --  *      *       20.0.0.2             0.0.0.0/0            udp spt:51820
+
+3. verify impact on pc1 wireguard tunnel
+
+nika exec --session-id 20260829-111205-d8233d pc1 wg show wg0 latest-handshakes
+pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=	1788029977
+
+nika exec --session-id 20260829-111205-d8233d --timeout 20 pc1 ping -c 10 172.16.1.1
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+
+--- 172.16.1.1 ping statistics ---
+10 packets transmitted, 0 received, 100% packet loss, time 9206ms
+

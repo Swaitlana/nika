@@ -1,0 +1,17 @@
+## The final purpose of this phase to verify and show that both coarse and Fine tools expose the same tools to the agent, only packaging varies do the hand fault injection and run the agent manually and record the results
+## Before that we need to make FINE and COARSE exactly identical 
+## From FINE we already trimmed these tools because our design and fault pairs did not use them 
+## FINE Loads - kathata_base_mcp_server.py and kathara_frr_mcp_server.py
+## COARSE Loads - kathara_coarse_mcp_server
+## exec_shell, exec_shell_dual, cat_file were removed
+## On August 23, we simply commented out mcp_decorater, so now    FINE only exposes 11 tools:
+## What was commented - get_tc_statistics,ethool,iperf_test, frr_get_bgp_conf, frr_get_ospf_conf
+## ip addr and netstat were extra tools in fine as well , they were added to coarse and when fault 3b was reinjected , netstat did not expose anything. ip adrr does expose drops on pc1 router and vpn_server_1 but not on gateway_router
+Files to look for - 
+phase3-netstat-ipaddr-baseline.txt
+phase3-netstat-ipaddr-fault-injection.txt
+phase3-netstat-ipaddr-post-fault-injection-behaviour.txt
+## 2b and 2c included ip addr and netstat added to COARSE tool as well , so as to make FINE and COARSE consists of same tools - this was done before actually capturing clean evidence 
+## At this moment , we think they do not expose any extra info to the agent.
+
+
