@@ -1,0 +1,88 @@
+## Phase 3 — Pair 1a (overlay: peer removed from vpn_server_1) — Restore
+## Session: 20260905-170215-4dea46
+
+## Restore command (from documents/handtests/pair-1/pair-1a-restore.txt)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 "wg set wg0 peer 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4= allowed-ips 172.16.1.11/32 endpoint 10.0.0.2:51803"
+
+Note: the endpoint above (10.0.0.2:51803) is the value recorded in the original
+hand-test and was applied as-is. pc1's actual current WireGuard listening port
+in this session is 52250 (not 58833/51803 from the original run). WireGuard
+self-corrected the peer's roaming endpoint to 10.0.0.2:52250 on vpn_server_1
+as soon as pc1 sent its next handshake — visible in the "vpn_server_1 wg show"
+output below. This is expected WireGuard endpoint-roaming behavior, not a
+restore failure.
+
+## pc1 ping vpn_server_1 (172.16.1.1) — passes
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 3 172.16.1.1
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+64 bytes from 172.16.1.1: icmp_seq=1 ttl=64 time=1.49 ms
+64 bytes from 172.16.1.1: icmp_seq=2 ttl=64 time=2.22 ms
+64 bytes from 172.16.1.1: icmp_seq=3 ttl=64 time=2.52 ms
+
+--- 172.16.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2013ms
+rtt min/avg/max/mdev = 1.494/2.075/2.516/0.429 ms
+
+## pc1 ping web_server_1 (172.16.1.21) — passes
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 3 172.16.1.21
+PING 172.16.1.21 (172.16.1.21) 56(84) bytes of data.
+64 bytes from 172.16.1.21: icmp_seq=1 ttl=63 time=3.57 ms
+64 bytes from 172.16.1.21: icmp_seq=2 ttl=63 time=3.35 ms
+64 bytes from 172.16.1.21: icmp_seq=3 ttl=63 time=3.25 ms
+
+--- 172.16.1.21 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2010ms
+rtt min/avg/max/mdev = 3.251/3.389/3.569/0.133 ms
+
+## pc1 curl web_server_1 — passes (200)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+200
+
+## vpn_server_1 wg show — pc1 peer restored with a fresh handshake (7s), web-server peers unaffected
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:43958
+  allowed ips: 172.16.1.21/32
+  latest handshake: 4 seconds ago
+  transfer: 95.50 KiB received, 12.59 KiB sent
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  endpoint: 10.0.0.2:52250
+  allowed ips: 172.16.1.11/32
+  latest handshake: 7 seconds ago
+  transfer: 2.27 KiB received, 12.56 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:57482
+  allowed ips: 172.16.1.22/32
+  latest handshake: 1 hour, 22 minutes, 56 seconds ago
+  transfer: 71.10 KiB received, 8.80 KiB sent
+
+## pc1 wg show — fresh handshake (8s), newer than the stale fault-state handshake (~7-8 min)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 52250
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 8 seconds ago
+  transfer: 166.64 KiB received, 33.24 KiB sent
+
+## vpn_server_1 ping pc1 (172.16.1.11) — passes
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 ping -c 3 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+64 bytes from 172.16.1.11: icmp_seq=1 ttl=64 time=0.701 ms
+64 bytes from 172.16.1.11: icmp_seq=2 ttl=64 time=2.45 ms
+64 bytes from 172.16.1.11: icmp_seq=3 ttl=64 time=2.37 ms
+
+--- 172.16.1.11 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2020ms
+rtt min/avg/max/mdev = 0.701/1.842/2.454/0.807 ms

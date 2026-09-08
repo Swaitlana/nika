@@ -1,0 +1,73 @@
+## Phase 3 — Pair 3b (underlay: silent UDP 51820 drop at gateway_router) — Baseline
+## Session: 20260905-170215-4dea46
+
+## ACL/IP table on gateway_router before fault injection
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 gateway_router "iptables -L FORWARD -n -v"
+Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination
+
+## Ping and Curl tests
+
+1. pc1 pings to vpn_server_1
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 3 172.16.1.1
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+64 bytes from 172.16.1.1: icmp_seq=1 ttl=64 time=1.29 ms
+64 bytes from 172.16.1.1: icmp_seq=2 ttl=64 time=2.48 ms
+64 bytes from 172.16.1.1: icmp_seq=3 ttl=64 time=2.38 ms
+
+--- 172.16.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2009ms
+rtt min/avg/max/mdev = 1.291/2.050/2.475/0.537 ms
+
+2. pc1 curl to web_server_1
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+200
+
+3. vpn_server_1 pings to pc1
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 ping -c 4 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+64 bytes from 172.16.1.11: icmp_seq=1 ttl=64 time=0.674 ms
+64 bytes from 172.16.1.11: icmp_seq=2 ttl=64 time=2.67 ms
+64 bytes from 172.16.1.11: icmp_seq=3 ttl=64 time=2.16 ms
+64 bytes from 172.16.1.11: icmp_seq=4 ttl=64 time=1.77 ms
+
+--- 172.16.1.11 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3063ms
+rtt min/avg/max/mdev = 0.674/1.816/2.665/0.732 ms
+
+4. pc1 pings to vpn_server_1 underlay IP address
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 4 20.0.0.2
+PING 20.0.0.2 (20.0.0.2) 56(84) bytes of data.
+64 bytes from 20.0.0.2: icmp_seq=1 ttl=61 time=0.636 ms
+64 bytes from 20.0.0.2: icmp_seq=2 ttl=61 time=1.17 ms
+64 bytes from 20.0.0.2: icmp_seq=3 ttl=61 time=2.41 ms
+64 bytes from 20.0.0.2: icmp_seq=4 ttl=61 time=2.19 ms
+
+--- 20.0.0.2 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3043ms
+rtt min/avg/max/mdev = 0.636/1.602/2.411/0.728 ms
+
+5. pc1 pings to web_server_1
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 4 172.16.1.21
+PING 172.16.1.21 (172.16.1.21) 56(84) bytes of data.
+64 bytes from 172.16.1.21: icmp_seq=1 ttl=63 time=1.04 ms
+64 bytes from 172.16.1.21: icmp_seq=2 ttl=63 time=3.67 ms
+64 bytes from 172.16.1.21: icmp_seq=3 ttl=63 time=3.70 ms
+64 bytes from 172.16.1.21: icmp_seq=4 ttl=63 time=3.78 ms
+
+--- 172.16.1.21 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3019ms
+rtt min/avg/max/mdev = 1.044/3.048/3.777/1.158 ms
+
+6. wg show on pc1
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 52250
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 16 seconds ago
+  transfer: 234.81 KiB received, 73.12 KiB sent

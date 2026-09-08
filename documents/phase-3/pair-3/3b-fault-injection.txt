@@ -1,0 +1,92 @@
+## Phase 3 — Pair 3b (underlay: silent UDP 51820 drop at gateway_router) — Fault Injection
+## Session: 20260905-170215-4dea46
+
+## Fault injection commands (from documents/handtests/pair-3/pair-3b-fault-injection.txt)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 gateway_router "iptables -A FORWARD -p udp -d 20.0.0.2 --dport 51820 -j DROP"
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 gateway_router "iptables -A FORWARD -p udp -s 20.0.0.2 --sport 51820 -j DROP"
+
+## Immediate check: gateway_router iptables FORWARD chain — both rules present, counters at 0
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 gateway_router "iptables -L FORWARD -n -v"
+Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination
+    0     0 DROP       17   --  *      *       0.0.0.0/0            20.0.0.2             udp dpt:51820
+    0     0 DROP       17   --  *      *       20.0.0.2             0.0.0.0/0            udp spt:51820
+
+## pc1 ping vpn_server_1 (172.16.1.1) — fails (also generates traffic to increment counters)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 3 172.16.1.1
+[TIMEOUT] Command 'ping -c 3 172.16.1.1' on 'pc1' exceeded 10.0s.
+
+## iptables FORWARD chain after traffic — -d rule counter incremented (3 pkts / 468 bytes), -s rule still 0
+## (return-path packets never arrive because vpn_server_1 never sees the request; confirms the two-rule
+## design is required — a one-rule version was proven non-equivalent in the original hand-test)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 gateway_router "iptables -L FORWARD -n -v"
+Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination
+    3   468 DROP       17   --  *      *       0.0.0.0/0            20.0.0.2             udp dpt:51820
+    0     0 DROP       17   --  *      *       20.0.0.2             0.0.0.0/0            udp spt:51820
+
+## pc1 curl web_server_1 — fails with 000
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+000
+
+## vpn_server_1 ping pc1 (172.16.1.11) x4 — fails
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 ping -c 4 172.16.1.11
+[TIMEOUT] Command 'ping -c 4 172.16.1.11' on 'vpn_server_1' exceeded 10.0s.
+
+## pc1 ping vpn_server_1 underlay (20.0.0.2) x4 — passes (plain routing unaffected; only UDP 51820 is dropped)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 4 20.0.0.2
+PING 20.0.0.2 (20.0.0.2) 56(84) bytes of data.
+64 bytes from 20.0.0.2: icmp_seq=1 ttl=61 time=0.576 ms
+64 bytes from 20.0.0.2: icmp_seq=2 ttl=61 time=2.18 ms
+64 bytes from 20.0.0.2: icmp_seq=3 ttl=61 time=1.52 ms
+64 bytes from 20.0.0.2: icmp_seq=4 ttl=61 time=2.34 ms
+
+--- 20.0.0.2 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3064ms
+rtt min/avg/max/mdev = 0.576/1.656/2.342/0.695 ms
+
+## pc1 ping web_server_1 (172.16.1.21) x4 — fails
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 4 172.16.1.21
+[TIMEOUT] Command 'ping -c 4 172.16.1.21' on 'pc1' exceeded 10.0s.
+
+## pc1 handshake frozen — before vs after a forced (failed) ping
+
+1. Handshake timestamps immediately after fault injection
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 "wg show wg0 latest-handshakes"
+WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=	1788747519
+eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=	1788747227
+1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=	1788747516
+
+2. Forced handshake attempt (pc1 ping web_server_1 — fails)
+[TIMEOUT] Command 'ping -c 4 172.16.1.21' on 'pc1' exceeded 10.0s.
+
+3. Forced handshake attempt (vpn_server_1 ping pc1 — fails)
+[TIMEOUT] Command 'ping -c 4 172.16.1.11' on 'vpn_server_1' exceeded 10.0s.
+
+4. Handshake timestamps after the failed pings — pc1's row (...VV4=) frozen at 1788747516
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 "wg show wg0 latest-handshakes"
+WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=	1788747519
+eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=	1788747227
+1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=	1788747516
+
+## pc1 wg show — handshake age climbing, matches overlay-half signature
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 52250
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 2 minutes, 5 seconds ago
+  transfer: 234.81 KiB received, 76.73 KiB sent
+
+### Reading
+pc1's last-handshake timestamp (1788747516) is identical before and after
+forced pings that failed. pc1 attempted to re-handshake and got no response —
+handshake sent, never answered. UDP 51820 is dropped at gateway_router in
+both directions, so the tunnel is dead while the underlay path (20.0.0.2)
+stays reachable. Matches the original hand-test signature exactly, and is
+the same pc1-side symptom as the overlay half (pair 3a) — the difference is
+only visible at the gateway_router iptables layer.

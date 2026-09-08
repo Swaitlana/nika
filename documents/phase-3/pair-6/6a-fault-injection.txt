@@ -1,0 +1,179 @@
+## Phase 3 — Pair 6a (overlay: wrong endpoint IP in pc1's wg config) — Fault Injection
+## Session: 20260907-190107-c0b662
+
+## Fault injection commands (from documents/handtests/pair-6/pair-6a-fault-injection.txt)
+
+1. Point pc1's server-peer endpoint at 20.0.0.5
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 "wg set wg0 peer pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA= endpoint 20.0.0.5:51820"
+
+2. Clear the learned endpoint on vpn_server_1 (no wg set option removes one — remove/re-add is the only way)
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "wg set wg0 peer 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4= remove"
+
+3. Re-add pc1 as a new peer on vpn_server_1 (no endpoint)
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "wg set wg0 peer 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4= allowed-ips 172.16.1.11/32"
+
+## Verifying fault injection
+
+1. peer on pc1 changed to 20.0.0.5
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 42044
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.5:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 3 minutes, 35 seconds ago
+  transfer: 25.90 KiB received, 5.32 KiB sent
+
+2. no handshake or endpoint info on vpn_server_1 for pc1's peer
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:43907
+  allowed ips: 172.16.1.21/32
+  latest handshake: 3 minutes, 33 seconds ago
+  transfer: 24.61 KiB received, 3.89 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:45719
+  allowed ips: 172.16.1.22/32
+  latest handshake: 24 minutes, 1 second ago
+  transfer: 564 B received, 476 B sent
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  allowed ips: 172.16.1.11/32
+
+## Core 5 tests
+
+1. pc1 ping vpn_server_1 — fails
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 ping -c 3 172.16.1.1
+[TIMEOUT] Command 'ping -c 3 172.16.1.1' on 'pc1' exceeded 10.0s.
+
+2. curl from pc1 to web_server_1 — fails with 000
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+000
+
+3. vpn_server_1 pings pc1 — fails, Destination Host Unreachable
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 ping -c 4 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+From 172.16.1.1 icmp_seq=1 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=2 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=3 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=4 Destination Host Unreachable
+
+--- 172.16.1.11 ping statistics ---
+4 packets transmitted, 0 received, +4 errors, 100% packet loss, time 3060ms
+
+4. pc1 pings underlay IP of vpn_server_1 — passes (underlay path unaffected)
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 ping -c 4 20.0.0.2
+PING 20.0.0.2 (20.0.0.2) 56(84) bytes of data.
+64 bytes from 20.0.0.2: icmp_seq=1 ttl=61 time=0.613 ms
+64 bytes from 20.0.0.2: icmp_seq=2 ttl=61 time=2.34 ms
+64 bytes from 20.0.0.2: icmp_seq=3 ttl=61 time=2.04 ms
+64 bytes from 20.0.0.2: icmp_seq=4 ttl=61 time=2.06 ms
+
+--- 20.0.0.2 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3056ms
+rtt min/avg/max/mdev = 0.613/1.760/2.335/0.673 ms
+
+5. pc1 pings web_server_1 — fails
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 ping -c 4 172.16.1.21
+[TIMEOUT] Command 'ping -c 4 172.16.1.21' on 'pc1' exceeded 10.0s.
+
+## Fault injection specific tests
+
+1. pc1 pings fake peer IP 20.0.0.5 — unreachable, fails at external_router_1 (192.168.0.6)
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 ping -c 4 20.0.0.5
+PING 20.0.0.5 (20.0.0.5) 56(84) bytes of data.
+From 192.168.0.6 icmp_seq=1 Destination Host Unreachable
+From 192.168.0.6 icmp_seq=2 Destination Host Unreachable
+From 192.168.0.6 icmp_seq=3 Destination Host Unreachable
+From 192.168.0.6 icmp_seq=4 Destination Host Unreachable
+
+--- 20.0.0.5 ping statistics ---
+4 packets transmitted, 0 received, +4 errors, 100% packet loss, time 3045ms
+
+2. pc1 traceroute 20.0.0.5 — dies after external_router_1 (192.168.0.6), no further hops
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 traceroute -n -q 1 -w 1 20.0.0.5
+traceroute to 20.0.0.5 (20.0.0.5), 30 hops max, 60 byte packets
+ 1  10.0.0.1  0.308 ms
+ 2  192.168.0.3  0.745 ms
+ 3  192.168.0.6  0.971 ms
+ 4  *
+ 5  *
+ (hops 5-30 all *)
+
+3. external_router_1 ip neigh show — 20.0.0.5 FAILED (never resolved), 20.0.0.2 STALE (real server, known)
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 external_router_1 "ip neigh show"
+20.0.0.5 dev br0 FAILED
+192.168.0.7 dev eth0 lladdr ee:f1:ed:53:89:d9 REACHABLE
+20.0.0.2 dev br0 lladdr da:ee:0e:3b:d8:4b STALE
+
+## Epoch check — proof of frozen handshake and complete server-side peer wipe
+
+1. vpn_server_1 latest-handshakes — pc1's row (...VV4=) reset to 0, proving the peer wipe
+   was complete and the server cannot initiate
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "wg show wg0 latest-handshakes"
+WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=	1788834091
+eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=	1788832863
+1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=	0
+
+2. pc1 latest-handshakes — before a forced ping
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 "wg show wg0 latest-handshakes"
+pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=	1788834088
+
+3. Forced handshake attempt (pc1 ping vpn_server_1 — fails)
+[TIMEOUT] Command 'ping -c 3 172.16.1.1' on 'pc1' exceeded 10.0s.
+
+4. pc1 latest-handshakes — after the forced ping, identical to before — frozen
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 "wg show wg0 latest-handshakes"
+pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=	1788834088
+
+## Final wg show snapshots
+
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 42044
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.5:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 5 minutes, 43 seconds ago
+  transfer: 25.90 KiB received, 8.50 KiB sent
+
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:43907
+  allowed ips: 172.16.1.21/32
+  latest handshake: 5 minutes, 41 seconds ago
+  transfer: 24.61 KiB received, 3.89 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:45719
+  allowed ips: 172.16.1.22/32
+  latest handshake: 26 minutes, 9 seconds ago
+  transfer: 564 B received, 476 B sent
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  allowed ips: 172.16.1.11/32
+
+### Reading
+Core-5 fingerprint (TIMEOUT / 000 / Destination Host Unreachable / underlay-pass /
+TIMEOUT) matches the recorded hand-test signature and is identical at the tunnel layer
+to pair 3a. The discriminator is only visible one layer down: pc1's configured
+endpoint (20.0.0.5, wrong) plus the server having zero handshake state for pc1's key —
+exposed by get_tunnel_status in FINE and check_overlay in COARSE, per
+documents/handtests/pair-6/pair-6-process.txt.

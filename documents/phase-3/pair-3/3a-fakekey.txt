@@ -1,0 +1,5 @@
+## Fake key generated for Pair 3a fault injection (overlay: wrong peer public key on vpn_server_1)
+## Session: 20260905-170215-4dea46
+
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 "wg genkey | wg pubkey"
+oONQxJziBdWUaZfk6yVV2ptmSb3D8lmrFwblvkxcOUc=

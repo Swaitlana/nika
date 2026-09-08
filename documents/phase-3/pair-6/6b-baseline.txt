@@ -1,0 +1,147 @@
+## Phase 3 — Pair 6b (underlay: vpn_server_1's public interface IP misconfigured) — Baseline
+## Session: 20260907-190107-c0b662
+
+## wg status on vpn_server_1 and pc1
+
+1. vpn_server_1 wg show
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:45719
+  allowed ips: 172.16.1.22/32
+  latest handshake: 2 minutes, 24 seconds ago
+  transfer: 1.80 KiB received, 4.36 KiB sent
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:43907
+  allowed ips: 172.16.1.21/32
+  latest handshake: 2 minutes, 24 seconds ago
+  transfer: 37.61 KiB received, 9.16 KiB sent
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  endpoint: 10.0.0.2:42044
+  allowed ips: 172.16.1.11/32
+  latest handshake: 2 minutes, 24 seconds ago
+  transfer: 9.39 KiB received, 14.50 KiB sent
+
+2. vpn_server_1 latest-handshakes
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "wg show wg0 latest-handshakes"
+WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=	1788834642
+eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=	1788834642
+1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=	1788834642
+
+3. vpn_server_1 eth0 (this address will be altered during fault injection)
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "ip addr show eth0"
+39: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether da:ee:0e:3b:d8:4b brd ff:ff:ff:ff:ff:ff
+    inet 20.0.0.2/24 scope global eth0
+       valid_lft forever preferred_lft forever
+
+4. vpn_server_1 ip route show
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "ip route show"
+default via 20.0.0.1 dev eth0
+20.0.0.0/24 dev eth0 proto kernel scope link src 20.0.0.2
+172.16.1.0/24 dev wg0 proto kernel scope link src 172.16.1.1
+
+## Commands on pc1 and external_router_1
+
+1. pc1 wg show
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 42044
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 2 minutes, 27 seconds ago
+  transfer: 40.39 KiB received, 22.81 KiB sent
+
+2. pc1 latest-handshakes
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 "wg show wg0 latest-handshakes"
+pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=	1788834642
+
+3. external_router_1 ip neigh show
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 external_router_1 "ip neigh show"
+20.0.0.5 dev br0 FAILED
+20.0.0.3 dev br0 lladdr 4a:1c:40:5c:d5:2c STALE
+192.168.0.7 dev eth0 lladdr ee:f1:ed:53:89:d9 STALE
+20.0.0.4 dev br0 lladdr c6:ed:c3:24:86:53 STALE
+20.0.0.2 dev br0 lladdr da:ee:0e:3b:d8:4b STALE
+
+## Pings and Curl tests
+
+1. Pings Test - PC1 pings to vpn_server_1
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 ping -c 3 172.16.1.1
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+64 bytes from 172.16.1.1: icmp_seq=1 ttl=64 time=0.863 ms
+64 bytes from 172.16.1.1: icmp_seq=2 ttl=64 time=2.90 ms
+64 bytes from 172.16.1.1: icmp_seq=3 ttl=64 time=2.44 ms
+
+--- 172.16.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2054ms
+rtt min/avg/max/mdev = 0.863/2.068/2.899/0.872 ms
+
+2. pc1 curl test to web_server_1
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+200
+
+3. Ping test from vpn_server_1 to pc1
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 ping -c 4 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+64 bytes from 172.16.1.11: icmp_seq=1 ttl=64 time=0.738 ms
+64 bytes from 172.16.1.11: icmp_seq=2 ttl=64 time=1.15 ms
+64 bytes from 172.16.1.11: icmp_seq=3 ttl=64 time=2.53 ms
+64 bytes from 172.16.1.11: icmp_seq=4 ttl=64 time=2.44 ms
+
+--- 172.16.1.11 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3068ms
+rtt min/avg/max/mdev = 0.738/1.715/2.533/0.786 ms
+
+4. Pings test from pc1 to underlay vpn_server_1 address
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 ping -c 4 20.0.0.2
+PING 20.0.0.2 (20.0.0.2) 56(84) bytes of data.
+64 bytes from 20.0.0.2: icmp_seq=1 ttl=61 time=0.631 ms
+64 bytes from 20.0.0.2: icmp_seq=2 ttl=61 time=2.20 ms
+64 bytes from 20.0.0.2: icmp_seq=3 ttl=61 time=2.15 ms
+64 bytes from 20.0.0.2: icmp_seq=4 ttl=61 time=1.41 ms
+
+--- 20.0.0.2 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3028ms
+rtt min/avg/max/mdev = 0.631/1.596/2.203/0.639 ms
+
+5. pc1 pings to web_server_1
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 ping -c 4 172.16.1.21
+PING 172.16.1.21 (172.16.1.21) 56(84) bytes of data.
+64 bytes from 172.16.1.21: icmp_seq=1 ttl=63 time=1.00 ms
+64 bytes from 172.16.1.21: icmp_seq=2 ttl=63 time=3.56 ms
+64 bytes from 172.16.1.21: icmp_seq=3 ttl=63 time=1.82 ms
+64 bytes from 172.16.1.21: icmp_seq=4 ttl=63 time=3.35 ms
+
+--- 172.16.1.21 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3017ms
+rtt min/avg/max/mdev = 1.003/2.433/3.562/1.065 ms
+
+## ip neighbour on external_router_1 (recent ping to 20.0.0.2 needed for REACHABLE, else STALE)
+
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 external_router_1 ping -c 3 20.0.0.2
+PING 20.0.0.2 (20.0.0.2) 56(84) bytes of data.
+64 bytes from 20.0.0.2: icmp_seq=1 ttl=64 time=0.164 ms
+64 bytes from 20.0.0.2: icmp_seq=2 ttl=64 time=0.854 ms
+64 bytes from 20.0.0.2: icmp_seq=3 ttl=64 time=0.913 ms
+
+--- 20.0.0.2 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2041ms
+rtt min/avg/max/mdev = 0.164/0.643/0.913/0.340 ms
+
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 external_router_1 "ip neigh show"
+20.0.0.5 dev br0 FAILED
+20.0.0.3 dev br0 lladdr 4a:1c:40:5c:d5:2c STALE
+192.168.0.7 dev eth0 lladdr ee:f1:ed:53:89:d9 STALE
+20.0.0.4 dev br0 lladdr c6:ed:c3:24:86:53 STALE
+20.0.0.2 dev br0 lladdr da:ee:0e:3b:d8:4b REACHABLE

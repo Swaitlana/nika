@@ -1,0 +1,115 @@
+## Phase 3 — Pair 3a (overlay: wrong peer public key on vpn_server_1) — Fault Injection
+## Session: 20260905-170215-4dea46
+
+## Fake key generated for this run (recorded separately in 3a-fakekey.txt)
+oONQxJziBdWUaZfk6yVV2ptmSb3D8lmrFwblvkxcOUc=
+
+## Fault injection commands (from documents/handtests/pair-3/pair-3a-fault-injection.txt)
+
+## Step 1: remove real pc1 peer from vpn_server_1
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 "wg set wg0 peer 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4= remove"
+
+## Step 2: add fake key peer with pc1's allowed-ips
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 "wg set wg0 peer oONQxJziBdWUaZfk6yVV2ptmSb3D8lmrFwblvkxcOUc= allowed-ips 172.16.1.11/32"
+
+## Immediate check: vpn_server_1 wg show — real pc1 key gone, fake key present with 172.16.1.11/32, web-server peers intact
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:43958
+  allowed ips: 172.16.1.21/32
+  latest handshake: 1 hour, 10 minutes, 47 seconds ago
+  transfer: 132.27 KiB received, 18.43 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:57482
+  allowed ips: 172.16.1.22/32
+  latest handshake: 1 day, 2 hours, 4 minutes, 55 seconds ago
+  transfer: 71.10 KiB received, 8.80 KiB sent
+
+peer: oONQxJziBdWUaZfk6yVV2ptmSb3D8lmrFwblvkxcOUc=
+  allowed ips: 172.16.1.11/32
+
+## Immediate check: pc1 wg show — before fault (unchanged local config, no new handshake since fault)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 52250
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 1 hour, 10 minutes, 51 seconds ago
+  transfer: 206.16 KiB received, 53.82 KiB sent
+
+## pc1 ping vpn_server_1 (172.16.1.1) — fails
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 3 172.16.1.1
+[TIMEOUT] Command 'ping -c 3 172.16.1.1' on 'pc1' exceeded 10.0s.
+
+## pc1 curl web_server_1 — fails with 000
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+000
+
+## vpn_server_1 ping pc1 (172.16.1.11) x4 — fails, Destination Host Unreachable
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 ping -c 4 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+From 172.16.1.1 icmp_seq=1 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=2 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=3 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=4 Destination Host Unreachable
+
+--- 172.16.1.11 ping statistics ---
+4 packets transmitted, 0 received, +4 errors, 100% packet loss, time 3085ms
+
+## pc1 ping vpn_server_1 underlay (20.0.0.2) x4 — passes (underlay path unaffected, overlay-only fault)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 4 20.0.0.2
+PING 20.0.0.2 (20.0.0.2) 56(84) bytes of data.
+64 bytes from 20.0.0.2: icmp_seq=1 ttl=61 time=0.621 ms
+64 bytes from 20.0.0.2: icmp_seq=2 ttl=61 time=2.18 ms
+64 bytes from 20.0.0.2: icmp_seq=3 ttl=61 time=2.24 ms
+64 bytes from 20.0.0.2: icmp_seq=4 ttl=61 time=2.09 ms
+
+--- 20.0.0.2 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3061ms
+rtt min/avg/max/mdev = 0.621/1.780/2.237/0.671 ms
+
+## pc1 ping web_server_1 (172.16.1.21) x4 — fails
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 4 172.16.1.21
+[TIMEOUT] Command 'ping -c 4 172.16.1.21' on 'pc1' exceeded 10.0s.
+
+## pc1 wg0 state — before vs after fault (handshake frozen evidence)
+
+### Before fault injection (from 3a-baseline.txt)
+latest handshake: 1 hour, 33 minutes, 24 seconds ago (vpn_server_1 side, real peer)
+pc1 side transfer (baseline, pre-fault ping round): 192.98 KiB received, 50.90 KiB sent
+
+### After fault injection + failed pings
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 52250
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 1 hour, 11 minutes, 35 seconds ago
+  transfer: 206.16 KiB received, 54.84 KiB sent
+
+### Reading
+Sent advanced (53.82 -> 54.84 KiB) from ping-driven handshake retries;
+received stayed frozen at 206.16 KiB; last handshake aged from 1h10m51s to
+1h11m35s instead of resetting. pc1 is initiating and getting no response —
+handshake sent, never answered. Matches the original hand-test signature
+exactly.
+
+Note: the 2-minute fingerprint-settling wait specified in the recorded
+process (documents/handtests/pair-3/pair-3-process.txt) was skipped at the
+user's explicit request for this run. The signature above was captured
+immediately after fault injection and already shows the frozen-handshake
+pattern clearly.

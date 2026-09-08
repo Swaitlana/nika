@@ -1,0 +1,301 @@
+## Cold-state check: is the 3a/3b reverse-ping asymmetry real or a hand-testing artifact?
+##
+## Background: in the recorded hand tests, vpn_server_1 -> pc1 reverse ping (172.16.1.11)
+## behaves differently in the two fault halves: 3a fails immediately with
+## "Destination Host Unreachable", 3b hangs until timeout. Hypothesis: this is caused by
+## vpn_server_1 having already learned pc1's endpoint from earlier tunnel traffic during
+## hand testing. NIKA's real pipeline injects faults before any tunnel traffic, so the
+## server may have no learned endpoint and both halves may behave identically. This file
+## records a test of that hypothesis: a completely fresh lab per half, zero tunnel traffic
+## (no ping/curl through the tunnel) before fault injection.
+##
+## Rule enforced throughout: no ping, curl, or other tunnel traffic between lab start and
+## fault injection in each half. wg show is a passive status query and does not count.
+
+===============================================================================
+PRE-STAGE: Docker Desktop was found stopped when this test began. User confirmed they
+started it; daemon confirmed reachable before any nika commands were run. The pre-existing
+session (20260905-170215-4dea46) was found to have dead containers (stale "running" status
+in nika's session store) and was closed cleanly as part of Stage 1 below.
+===============================================================================
+
+## ========================= HALF 1: PAIR 3b (tested first) =========================
+## Rationale for order: 3a modifies the server's peer config (removes/re-adds keys),
+## so a fresh lab is cleaner for the half whose result depends on learned endpoint state.
+## 3b (iptables drop) does not touch peer config at all.
+
+## --- Stage 1: close old session, start fresh lab, check for learned endpoint ---
+
+(nika) uv run nika session close 20260905-170215-4dea46 --yes
+Closed: 20260905-170215-4dea46
+
+(nika) uv run nika env run rip_small_internet_vpn --tier s
+session_id=20260907-185606-e05b65
+
+SESSION ID (3b half): 20260907-185606-e05b65
+
+Immediately after lab start (no tunnel traffic yet):
+(nika) uv run nika exec --session-id 20260907-185606-e05b65 vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:38869
+  allowed ips: 172.16.1.22/32
+  latest handshake: 12 seconds ago
+  transfer: 564 B received, 476 B sent
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:54296
+  allowed ips: 172.16.1.21/32
+  latest handshake: 12 seconds ago
+  transfer: 564 B received, 476 B sent
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  allowed ips: 172.16.1.11/32
+
+Observation: pc1's peer entry (key ...VV4=) has NO endpoint line, no handshake, no
+transfer counters — confirms vpn_server_1 has not learned pc1's endpoint. (The two
+web-server peers already show endpoints/handshakes at ~12s — those hosts initiate
+their own connections automatically at lab boot; unrelated to pc1/client side under test.)
+
+## --- Stage 2: inject 3b (no other traffic first), then reverse ping ---
+
+Fault injection commands (from documents/handtests/pair-3/pair-3b-fault-injection.txt):
+(nika) uv run nika exec --session-id 20260907-185606-e05b65 gateway_router "iptables -A FORWARD -p udp -d 20.0.0.2 --dport 51820 -j DROP"
+(nika) uv run nika exec --session-id 20260907-185606-e05b65 gateway_router "iptables -A FORWARD -p udp -s 20.0.0.2 --sport 51820 -j DROP"
+
+Confirm rules in place, counters at 0 (no traffic crossed yet):
+(nika) uv run nika exec --session-id 20260907-185606-e05b65 gateway_router "iptables -L FORWARD -n -v"
+Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination
+    0     0 DROP       17   --  *      *       0.0.0.0/0            20.0.0.2             udp dpt:51820
+    0     0 DROP       17   --  *      *       20.0.0.2             0.0.0.0/0              udp spt:51820
+
+Reverse ping test (the measurement of interest):
+(nika) uv run nika exec --session-id 20260907-185606-e05b65 vpn_server_1 ping -c 4 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+From 172.16.1.1 icmp_seq=1 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=2 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=3 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=4 Destination Host Unreachable
+
+--- 172.16.1.11 ping statistics ---
+4 packets transmitted, 0 received, +4 errors, 100% packet loss, time 3074ms
+
+Note: completed in ~3s with "Destination Host Unreachable" on every packet — NOT the
+10s-per-packet timeout hang seen in the original hand test for 3b.
+
+## --- Stage 3: restore 3b, confirm healthy ---
+
+Restore commands (from documents/handtests/pair-3/pair-3b-restore.txt):
+(nika) uv run nika exec --session-id 20260907-185606-e05b65 gateway_router "iptables -D FORWARD -p udp -d 20.0.0.2 --dport 51820 -j DROP"
+(nika) uv run nika exec --session-id 20260907-185606-e05b65 gateway_router "iptables -D FORWARD -p udp -s 20.0.0.2 --sport 51820 -j DROP"
+
+(nika) uv run nika exec --session-id 20260907-185606-e05b65 gateway_router "iptables -L FORWARD -n -v"
+Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination
+
+Health checks:
+(nika) uv run nika exec --session-id 20260907-185606-e05b65 pc1 ping -c 3 172.16.1.1
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+64 bytes from 172.16.1.1: icmp_seq=1 ttl=64 time=1.60 ms
+64 bytes from 172.16.1.1: icmp_seq=2 ttl=64 time=2.29 ms
+64 bytes from 172.16.1.1: icmp_seq=3 ttl=64 time=2.36 ms
+
+--- 172.16.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2005ms
+rtt min/avg/max/mdev = 1.599/2.083/2.361/0.343 ms
+
+(nika) uv run nika exec --session-id 20260907-185606-e05b65 pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+200
+
+(nika) uv run nika exec --session-id 20260907-185606-e05b65 vpn_server_1 ping -c 4 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+64 bytes from 172.16.1.11: icmp_seq=1 ttl=64 time=0.773 ms
+64 bytes from 172.16.1.11: icmp_seq=2 ttl=64 time=2.29 ms
+64 bytes from 172.16.1.11: icmp_seq=3 ttl=64 time=2.39 ms
+64 bytes from 172.16.1.11: icmp_seq=4 ttl=64 time=2.24 ms
+
+--- 172.16.1.11 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3021ms
+rtt min/avg/max/mdev = 0.773/1.923/2.385/0.665 ms
+
+(nika) uv run nika exec --session-id 20260907-185606-e05b65 pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 49790
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 8 seconds ago
+  transfer: 12.68 KiB received, 2.39 KiB sent
+
+Lab confirmed healthy. 3b half of the test is complete.
+
+## ========================= HALF 2: PAIR 3a =========================
+
+## --- Stage 4a: close 3b session, start fresh lab, check for learned endpoint ---
+
+(nika) uv run nika session close 20260907-185606-e05b65 --yes
+Closed: 20260907-185606-e05b65
+
+(nika) uv run nika env run rip_small_internet_vpn --tier s
+session_id=20260907-190107-c0b662
+
+SESSION ID (3a half): 20260907-190107-c0b662
+
+Immediately after lab start (no tunnel traffic yet):
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:43907
+  allowed ips: 172.16.1.21/32
+  latest handshake: 10 seconds ago
+  transfer: 532 B received, 476 B sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:45719
+  allowed ips: 172.16.1.22/32
+  latest handshake: 10 seconds ago
+  transfer: 532 B received, 476 B sent
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  allowed ips: 172.16.1.11/32
+
+Observation: pc1's peer entry has no endpoint line, no handshake, no transfer counters —
+same no-learned-endpoint starting condition as the 3b half.
+
+## --- Stage 4b: inject 3a (fresh fake key generated for this run), then reverse ping ---
+
+Fake key generated for this run (per documents/handtests/pair-3/pair-3-process.txt prep step):
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "wg genkey | wg pubkey"
+o4VejtHe5kVbdmUH4b0a9Gk+XBLhbKTVfMfIVFjrFWA=
+
+Fault injection commands (from documents/handtests/pair-3/pair-3a-fault-injection.txt):
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "wg set wg0 peer 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4= remove"
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "wg set wg0 peer o4VejtHe5kVbdmUH4b0a9Gk+XBLhbKTVfMfIVFjrFWA= allowed-ips 172.16.1.11/32"
+
+Confirm: real pc1 key gone, fake key present with 172.16.1.11/32, web-server peers intact:
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:43907
+  allowed ips: 172.16.1.21/32
+  latest handshake: 25 seconds ago
+  transfer: 564 B received, 476 B sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:45719
+  allowed ips: 172.16.1.22/32
+  latest handshake: 25 seconds ago
+  transfer: 564 B received, 476 B sent
+
+peer: o4VejtHe5kVbdmUH4b0a9Gk+XBLhbKTVfMfIVFjrFWA=
+  allowed ips: 172.16.1.11/32
+
+Reverse ping test (the measurement of interest):
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 ping -c 4 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+From 172.16.1.1 icmp_seq=1 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=2 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=3 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=4 Destination Host Unreachable
+
+--- 172.16.1.11 ping statistics ---
+4 packets transmitted, 0 received, +4 errors, 100% packet loss, time 3103ms
+
+## --- Stage 4c: restore 3a, confirm healthy ---
+
+Restore commands (from documents/handtests/pair-3/pair-3a-restore.txt):
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "wg set wg0 peer o4VejtHe5kVbdmUH4b0a9Gk+XBLhbKTVfMfIVFjrFWA= remove"
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "wg set wg0 peer 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4= allowed-ips 172.16.1.11/32"
+
+Health checks (pc1 ping triggers the new handshake since endpoint arg was omitted):
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 ping -c 3 172.16.1.1
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+64 bytes from 172.16.1.1: icmp_seq=1 ttl=64 time=1.76 ms
+64 bytes from 172.16.1.1: icmp_seq=2 ttl=64 time=2.14 ms
+64 bytes from 172.16.1.1: icmp_seq=3 ttl=64 time=1.80 ms
+
+--- 172.16.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2014ms
+rtt min/avg/max/mdev = 1.763/1.900/2.136/0.167 ms
+
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+200
+
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 ping -c 4 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+64 bytes from 172.16.1.11: icmp_seq=1 ttl=64 time=0.938 ms
+64 bytes from 172.16.1.11: icmp_seq=2 ttl=64 time=2.23 ms
+64 bytes from 172.16.1.11: icmp_seq=3 ttl=64 time=2.58 ms
+64 bytes from 172.16.1.11: icmp_seq=4 ttl=64 time=0.787 ms
+
+--- 172.16.1.11 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3048ms
+rtt min/avg/max/mdev = 0.787/1.634/2.580/0.783 ms
+
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  endpoint: 10.0.0.2:42044
+  allowed ips: 172.16.1.11/32
+  latest handshake: 8 seconds ago
+  transfer: 2.39 KiB received, 12.68 KiB sent
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:43907
+  allowed ips: 172.16.1.21/32
+  latest handshake: 1 minute, 20 seconds ago
+  transfer: 12.27 KiB received, 1.84 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:45719
+  allowed ips: 172.16.1.22/32
+  transfer: 564 B received, 476 B sent
+
+Lab confirmed healthy. 3a half of the test is complete.
+
+## ========================= SIDE-BY-SIDE COMPARISON =========================
+##
+## vpn_server_1 -> pc1 reverse ping (172.16.1.11), cold lab, zero prior tunnel traffic:
+##
+## 3b (session 20260907-185606-e05b65):
+##   PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+##   From 172.16.1.1 icmp_seq=1 Destination Host Unreachable
+##   From 172.16.1.1 icmp_seq=2 Destination Host Unreachable
+##   From 172.16.1.1 icmp_seq=3 Destination Host Unreachable
+##   From 172.16.1.1 icmp_seq=4 Destination Host Unreachable
+##   --- 172.16.1.11 ping statistics ---
+##   4 packets transmitted, 0 received, +4 errors, 100% packet loss, time 3074ms
+##
+## 3a (session 20260907-190107-c0b662):
+##   PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+##   From 172.16.1.1 icmp_seq=1 Destination Host Unreachable
+##   From 172.16.1.1 icmp_seq=2 Destination Host Unreachable
+##   From 172.16.1.1 icmp_seq=3 Destination Host Unreachable
+##   From 172.16.1.1 icmp_seq=4 Destination Host Unreachable
+##   --- 172.16.1.11 ping statistics ---
+##   4 packets transmitted, 0 received, +4 errors, 100% packet loss, time 3103ms
+##
+## Both outputs: identical in kind (immediate "Destination Host Unreachable" on every
+## packet, ~3.0-3.1s total for 4 packets, 100% loss) and differ only in the original
+## hand-test recordings where 3b hung to a 10s-per-packet timeout instead. No conclusion
+## drawn beyond what these outputs show.

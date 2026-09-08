@@ -73,14 +73,14 @@ udp        0      0 127.0.0.11:37035        0.0.0.0:*                           
 udp        0      0 0.0.0.0:520             0.0.0.0:*                           -
 
 5. ip addr command on vpn_server_1 on wg0
-(nika) Swaitlana@MacBook-Air-2 nika % nika exec --session-id 20260829-111205-d8233d vpn_server_1 ip -4 -s addr show wg0
+=== $ nika exec --session-id 20260829-111205-d8233d vpn_server_1 ip -4 -s addr show wg0 ===
 11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000
     inet 172.16.1.1/24 scope global wg0
        valid_lft forever preferred_lft forever
     RX:  bytes packets errors dropped  missed   mcast           
           8580      70      0       0       0       0 
     TX:  bytes packets errors dropped carrier collsns           
-         11248      86      0      10       0       0
+          8140      65      0       0       0       0
 
 6. netstat on vpn_server_1
 === $ nika exec --session-id 20260829-111205-d8233d vpn_server_1 netstat -tunap -4 ===

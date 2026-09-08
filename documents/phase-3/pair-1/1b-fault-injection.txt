@@ -1,0 +1,112 @@
+## Phase 3 — Pair 1b (underlay: RIP withdrawal on external_router_1) — Fault Injection
+## Session: 20260905-170215-4dea46
+
+## Fault injection command (from documents/handtests/pair-1/pair-1b-fault-injection.txt)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 external_router_1 vtysh -c "'configure terminal'" -c "'router rip'" -c "'no network 20.0.0.0/24'"
+
+## Immediate check: external_router_1 running-config — network 20.0.0.0/24 removed
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 external_router_1 vtysh -c "'show running-config'"
+Building configuration...
+
+Current configuration:
+!
+frr version 10.5.3
+frr defaults traditional
+hostname external_router_1
+log file /var/log/frr/frr.log
+service integrated-vtysh-config
+!
+router rip
+ network 192.168.0.0/16
+ redistribute static
+exit
+!
+end
+
+## Immediate check: gateway_router route table — 20.0.0.0/24 already aged out
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 gateway_router vtysh -c "'show ip route'"
+IPv4 unicast VRF default:
+R>* 10.0.0.0/24 [120/2] via 192.168.0.2, eth0, weight 1, 02:29:15
+R>* 10.0.1.0/24 [120/2] via 192.168.0.4, eth1, weight 1, 02:29:15
+R>* 192.168.0.0/31 [120/2] via 192.168.0.4, eth1, weight 1, 02:29:15
+C>* 192.168.0.2/31 is directly connected, eth0, weight 1, 02:29:16
+L>* 192.168.0.3/32 is directly connected, eth0, weight 1, 02:29:16
+C>* 192.168.0.4/31 is directly connected, eth1, weight 1, 02:29:16
+L>* 192.168.0.5/32 is directly connected, eth1, weight 1, 02:29:16
+C>* 192.168.0.6/31 is directly connected, eth2, weight 1, 02:29:16
+L>* 192.168.0.7/32 is directly connected, eth2, weight 1, 02:29:16
+
+## Immediate check: router1 route table — 20.0.0.0/24 already aged out (no mesh reroute)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 router1 vtysh -c "'show ip route'"
+IPv4 unicast VRF default:
+C>* 10.0.0.0/24 is directly connected, eth2, weight 1, 02:29:17
+L>* 10.0.0.1/32 is directly connected, eth2, weight 1, 02:29:17
+R>* 10.0.1.0/24 [120/2] via 192.168.0.1, eth0, weight 1, 02:29:16
+C>* 192.168.0.0/31 is directly connected, eth0, weight 1, 02:29:17
+L>* 192.168.0.0/32 is directly connected, eth0, weight 1, 02:29:17
+C>* 192.168.0.2/31 is directly connected, eth1, weight 1, 02:29:17
+L>* 192.168.0.2/32 is directly connected, eth1, weight 1, 02:29:17
+R>* 192.168.0.4/31 [120/2] via 192.168.0.1, eth0, weight 1, 02:29:16
+R>* 192.168.0.6/31 [120/2] via 192.168.0.3, eth1, weight 1, 02:29:15
+
+## Immediate check: pc1 ping vpn_server_1 (172.16.1.1) — fails
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 3 172.16.1.1
+[TIMEOUT] Command 'ping -c 3 172.16.1.1' on 'pc1' exceeded 10.0s.
+
+## Immediate check: pc1 ping web_server_1 (172.16.1.21) — fails
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 3 172.16.1.21
+[TIMEOUT] Command 'ping -c 3 172.16.1.21' on 'pc1' exceeded 10.0s.
+
+## Immediate check: pc1 curl web_server_1 — fails with 000
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+000
+
+## Waited ~2.5 minutes for RIP timers to fully settle (per documents/handtests/pair-1/pair-1-process.txt)
+
+## Post-wait check: external_router_1 show ip rip — 20.0.0.0/24 no longer present in the RIP database
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 external_router_1 vtysh -c "'show ip rip'"
+     Network            Next Hop         Metric From            Tag Time
+R(n) 10.0.0.0/24        192.168.0.7           3 192.168.0.7       0 02:46
+R(n) 10.0.1.0/24        192.168.0.7           3 192.168.0.7       0 02:46
+R(n) 192.168.0.0/31     192.168.0.7           3 192.168.0.7       0 02:46
+R(n) 192.168.0.2/31     192.168.0.7           2 192.168.0.7       0 02:46
+R(n) 192.168.0.4/31     192.168.0.7           2 192.168.0.7       0 02:46
+C(i) 192.168.0.6/31     0.0.0.0               1 self              0
+
+## Post-wait check: gateway_router route table — 20.0.0.0/24 still absent
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 gateway_router vtysh -c "'show ip route'"
+IPv4 unicast VRF default:
+R>* 10.0.0.0/24 [120/2] via 192.168.0.2, eth0, weight 1, 02:32:32
+R>* 10.0.1.0/24 [120/2] via 192.168.0.4, eth1, weight 1, 02:32:32
+R>* 192.168.0.0/31 [120/2] via 192.168.0.4, eth1, weight 1, 02:32:32
+C>* 192.168.0.2/31 is directly connected, eth0, weight 1, 02:32:33
+L>* 192.168.0.3/32 is directly connected, eth0, weight 1, 02:32:33
+C>* 192.168.0.4/31 is directly connected, eth1, weight 1, 02:32:33
+L>* 192.168.0.5/32 is directly connected, eth1, weight 1, 02:32:33
+C>* 192.168.0.6/31 is directly connected, eth2, weight 1, 02:32:33
+L>* 192.168.0.7/32 is directly connected, eth2, weight 1, 02:32:33
+
+## Post-wait check: router1 route table — 20.0.0.0/24 still absent
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 router1 vtysh -c "'show ip route'"
+IPv4 unicast VRF default:
+C>* 10.0.0.0/24 is directly connected, eth2, weight 1, 02:32:34
+L>* 10.0.0.1/32 is directly connected, eth2, weight 1, 02:32:34
+R>* 10.0.1.0/24 [120/2] via 192.168.0.1, eth0, weight 1, 02:32:33
+C>* 192.168.0.0/31 is directly connected, eth0, weight 1, 02:32:34
+L>* 192.168.0.0/32 is directly connected, eth0, weight 1, 02:32:34
+C>* 192.168.0.2/31 is directly connected, eth1, weight 1, 02:32:34
+L>* 192.168.0.2/32 is directly connected, eth1, weight 1, 02:32:34
+R>* 192.168.0.4/31 [120/2] via 192.168.0.1, eth0, weight 1, 02:32:33
+R>* 192.168.0.6/31 [120/2] via 192.168.0.3, eth1, weight 1, 02:32:32
+
+## Post-wait check: pc1 ping vpn_server_1 (172.16.1.1) — still fails
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 3 172.16.1.1
+[TIMEOUT] Command 'ping -c 3 172.16.1.1' on 'pc1' exceeded 10.0s.
+
+## Post-wait check: pc1 ping web_server_1 (172.16.1.21) — still fails
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 3 172.16.1.21
+[TIMEOUT] Command 'ping -c 3 172.16.1.21' on 'pc1' exceeded 10.0s.
+
+## Post-wait check: pc1 curl web_server_1 — still fails with 000
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+000

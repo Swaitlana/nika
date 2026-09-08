@@ -1,0 +1,65 @@
+## Phase 3 — Pair 6a (overlay: wrong endpoint IP in pc1's wg config) — Restore
+## Session: 20260907-190107-c0b662
+
+## Restore command (from documents/handtests/pair-6/pair-6a-restore.txt)
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 "wg set wg0 peer pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA= endpoint 20.0.0.2:51820"
+
+## pc1 wg show — endpoint corrected, fresh handshake (11s)
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 42044
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 11 seconds ago
+  transfer: 28.27 KiB received, 21.06 KiB sent
+
+## Ping and Curl tests
+
+1. pc1 pings to vpn_server_1 — passes
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 ping -c 3 172.16.1.1
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+64 bytes from 172.16.1.1: icmp_seq=1 ttl=64 time=0.677 ms
+64 bytes from 172.16.1.1: icmp_seq=2 ttl=64 time=2.21 ms
+64 bytes from 172.16.1.1: icmp_seq=3 ttl=64 time=1.37 ms
+
+--- 172.16.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2058ms
+rtt min/avg/max/mdev = 0.677/1.419/2.214/0.628 ms
+
+2. pc1 curls to web_server_1 — passes (200)
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+200
+
+3. vpn_server_1 wg show — all peers healthy, fresh handshakes including pc1's (23s)
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:45719
+  allowed ips: 172.16.1.22/32
+  latest handshake: 23 seconds ago
+  transfer: 1.80 KiB received, 4.36 KiB sent
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:43907
+  allowed ips: 172.16.1.21/32
+  latest handshake: 23 seconds ago
+  transfer: 37.57 KiB received, 9.16 KiB sent
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  endpoint: 10.0.0.2:42044
+  allowed ips: 172.16.1.11/32
+  latest handshake: 23 seconds ago
+  transfer: 9.39 KiB received, 14.46 KiB sent
+
+4. pc1 latest-handshakes — advanced from frozen 1788834088 (during fault) to 1788834642,
+   proving the tunnel re-handshook successfully
+(nika) uv run nika exec --session-id 20260907-190107-c0b662 pc1 "wg show wg0 latest-handshakes"
+pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=	1788834642

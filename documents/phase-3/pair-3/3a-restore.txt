@@ -1,0 +1,101 @@
+## Phase 3 — Pair 3a (overlay: wrong peer public key on vpn_server_1) — Restore
+## Session: 20260905-170215-4dea46
+
+## Restore commands (from documents/handtests/pair-3/pair-3a-restore.txt)
+
+## Step 1: remove fake key peer from vpn_server_1
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 "wg set wg0 peer oONQxJziBdWUaZfk6yVV2ptmSb3D8lmrFwblvkxcOUc= remove"
+
+## Step 2: re-add real pc1 peer (endpoint omitted — pc1 initiates, WireGuard roams the endpoint)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 "wg set wg0 peer 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4= allowed-ips 172.16.1.11/32"
+
+## vpn_server_1 wg show — fake key gone, real pc1 peer restored with fresh handshake, all peers healthy
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:57482
+  allowed ips: 172.16.1.22/32
+  latest handshake: 14 seconds ago
+  transfer: 72.35 KiB received, 12.70 KiB sent
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:43958
+  allowed ips: 172.16.1.21/32
+  latest handshake: 14 seconds ago
+  transfer: 133.52 KiB received, 22.33 KiB sent
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  endpoint: 10.0.0.2:52250
+  allowed ips: 172.16.1.11/32
+  latest handshake: 14 seconds ago
+  transfer: 7.64 KiB received, 2.37 KiB sent
+
+## pc1 wg show — fresh handshake (15s), roamed endpoint auto-corrected
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 52250
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 15 seconds ago
+  transfer: 208.54 KiB received, 67.54 KiB sent
+
+## Heal proof — 4 symptom tests
+
+1. pc1 ping vpn_server_1 (172.16.1.1) — passes
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 3 172.16.1.1
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+64 bytes from 172.16.1.1: icmp_seq=1 ttl=64 time=0.748 ms
+64 bytes from 172.16.1.1: icmp_seq=2 ttl=64 time=2.36 ms
+64 bytes from 172.16.1.1: icmp_seq=3 ttl=64 time=2.58 ms
+
+--- 172.16.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2044ms
+rtt min/avg/max/mdev = 0.748/1.895/2.576/0.815 ms
+
+2. pc1 curl web_server_1 — passes (200)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+200
+
+3. vpn_server_1 ping pc1 (172.16.1.11) x4 — passes
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 ping -c 4 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+64 bytes from 172.16.1.11: icmp_seq=1 ttl=64 time=0.730 ms
+64 bytes from 172.16.1.11: icmp_seq=2 ttl=64 time=1.19 ms
+64 bytes from 172.16.1.11: icmp_seq=3 ttl=64 time=2.55 ms
+64 bytes from 172.16.1.11: icmp_seq=4 ttl=64 time=2.53 ms
+
+--- 172.16.1.11 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3037ms
+rtt min/avg/max/mdev = 0.730/1.750/2.549/0.805 ms
+
+4. pc1 ping vpn_server_1 underlay (20.0.0.2) x4 — passes (was already passing pre-restore; overlay-only fault)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 4 20.0.0.2
+PING 20.0.0.2 (20.0.0.2) 56(84) bytes of data.
+64 bytes from 20.0.0.2: icmp_seq=1 ttl=61 time=0.599 ms
+64 bytes from 20.0.0.2: icmp_seq=2 ttl=61 time=1.41 ms
+64 bytes from 20.0.0.2: icmp_seq=3 ttl=61 time=2.08 ms
+64 bytes from 20.0.0.2: icmp_seq=4 ttl=61 time=2.31 ms
+
+--- 20.0.0.2 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3024ms
+rtt min/avg/max/mdev = 0.599/1.600/2.308/0.665 ms
+
+5. pc1 ping web_server_1 (172.16.1.21) x4 — passes
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 4 172.16.1.21
+PING 172.16.1.21 (172.16.1.21) 56(84) bytes of data.
+64 bytes from 172.16.1.21: icmp_seq=1 ttl=63 time=1.04 ms
+64 bytes from 172.16.1.21: icmp_seq=2 ttl=63 time=3.20 ms
+64 bytes from 172.16.1.21: icmp_seq=3 ttl=63 time=4.02 ms
+64 bytes from 172.16.1.21: icmp_seq=4 ttl=63 time=3.33 ms
+
+--- 172.16.1.21 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3015ms
+rtt min/avg/max/mdev = 1.041/2.897/4.021/1.116 ms

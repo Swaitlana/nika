@@ -1,0 +1,118 @@
+## Phase 3 — Pair 1b (underlay: RIP withdrawal on external_router_1) — Restore
+## Session: 20260905-170215-4dea46
+
+## Restore command (from documents/handtests/pair-1/pair-1b-restore.txt)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 external_router_1 vtysh -c "'configure terminal'" -c "'router rip'" -c "'network 20.0.0.0/24'"
+
+## external_router_1 running-config — network 20.0.0.0/24 re-added
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 external_router_1 vtysh -c "'show running-config'"
+Building configuration...
+
+Current configuration:
+!
+frr version 10.5.3
+frr defaults traditional
+hostname external_router_1
+log file /var/log/frr/frr.log
+service integrated-vtysh-config
+!
+router rip
+ network 192.168.0.0/16
+ network 20.0.0.0/24
+ redistribute static
+exit
+!
+end
+
+## Waited ~30s for RIP convergence (per documents/handtests/pair-1/pair-1-process.txt)
+
+## router1 route table — 20.0.0.0/24 relearned (age 00:00:43, freshly reconverged)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 router1 vtysh -c "'show ip route'"
+IPv4 unicast VRF default:
+C>* 10.0.0.0/24 is directly connected, eth2, weight 1, 02:47:15
+L>* 10.0.0.1/32 is directly connected, eth2, weight 1, 02:47:15
+R>* 10.0.1.0/24 [120/2] via 192.168.0.1, eth0, weight 1, 02:47:14
+R>* 20.0.0.0/24 [120/3] via 192.168.0.3, eth1, weight 1, 00:00:43
+C>* 192.168.0.0/31 is directly connected, eth0, weight 1, 02:47:15
+L>* 192.168.0.0/32 is directly connected, eth0, weight 1, 02:47:15
+C>* 192.168.0.2/31 is directly connected, eth1, weight 1, 02:47:15
+L>* 192.168.0.2/32 is directly connected, eth1, weight 1, 02:47:15
+R>* 192.168.0.4/31 [120/2] via 192.168.0.1, eth0, weight 1, 02:47:14
+R>* 192.168.0.6/31 [120/2] via 192.168.0.3, eth1, weight 1, 02:47:13
+
+## gateway_router route table — 20.0.0.0/24 relearned (age 00:00:44, freshly reconverged)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 gateway_router vtysh -c "'show ip route'"
+IPv4 unicast VRF default:
+R>* 10.0.0.0/24 [120/2] via 192.168.0.2, eth0, weight 1, 02:47:15
+R>* 10.0.1.0/24 [120/2] via 192.168.0.4, eth1, weight 1, 02:47:15
+R>* 20.0.0.0/24 [120/2] via 192.168.0.6, eth2, weight 1, 00:00:44
+R>* 192.168.0.0/31 [120/2] via 192.168.0.4, eth1, weight 1, 02:47:15
+C>* 192.168.0.2/31 is directly connected, eth0, weight 1, 02:47:16
+L>* 192.168.0.3/32 is directly connected, eth0, weight 1, 02:47:16
+C>* 192.168.0.4/31 is directly connected, eth1, weight 1, 02:47:16
+L>* 192.168.0.5/32 is directly connected, eth1, weight 1, 02:47:16
+C>* 192.168.0.6/31 is directly connected, eth2, weight 1, 02:47:16
+L>* 192.168.0.7/32 is directly connected, eth2, weight 1, 02:47:16
+
+## external_router_1 route table
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 external_router_1 vtysh -c "'show ip route'"
+IPv4 unicast VRF default:
+R>* 10.0.0.0/24 [120/3] via 192.168.0.7, eth0, weight 1, 02:47:15
+R>* 10.0.1.0/24 [120/3] via 192.168.0.7, eth0, weight 1, 02:47:15
+C>* 20.0.0.0/24 is directly connected, br0, weight 1, 02:47:17
+L>* 20.0.0.1/32 is directly connected, br0, weight 1, 02:47:17
+R>* 192.168.0.0/31 [120/3] via 192.168.0.7, eth0, weight 1, 02:47:15
+R>* 192.168.0.2/31 [120/2] via 192.168.0.7, eth0, weight 1, 02:47:15
+R>* 192.168.0.4/31 [120/2] via 192.168.0.7, eth0, weight 1, 02:47:15
+C>* 192.168.0.6/31 is directly connected, eth0, weight 1, 02:47:17
+L>* 192.168.0.6/32 is directly connected, eth0, weight 1, 02:47:17
+
+## pc1 ping vpn_server_1 (172.16.1.1) — passes
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 3 172.16.1.1
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+64 bytes from 172.16.1.1: icmp_seq=1 ttl=64 time=1.64 ms
+64 bytes from 172.16.1.1: icmp_seq=2 ttl=64 time=2.39 ms
+64 bytes from 172.16.1.1: icmp_seq=3 ttl=64 time=6.68 ms
+
+--- 172.16.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2010ms
+rtt min/avg/max/mdev = 1.639/3.568/6.678/2.220 ms
+
+## pc1 ping web_server_1 (172.16.1.21) — passes
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 3 172.16.1.21
+PING 172.16.1.21 (172.16.1.21) 56(84) bytes of data.
+64 bytes from 172.16.1.21: icmp_seq=1 ttl=63 time=1.94 ms
+64 bytes from 172.16.1.21: icmp_seq=2 ttl=63 time=3.29 ms
+64 bytes from 172.16.1.21: icmp_seq=3 ttl=63 time=3.55 ms
+
+--- 172.16.1.21 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2009ms
+rtt min/avg/max/mdev = 1.941/2.927/3.551/0.705 ms
+
+## pc1 curl web_server_1 — passes (200)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+200
+
+## vpn_server_1 ping pc1 (172.16.1.11) — passes
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 ping -c 3 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+64 bytes from 172.16.1.11: icmp_seq=1 ttl=64 time=0.758 ms
+64 bytes from 172.16.1.11: icmp_seq=2 ttl=64 time=2.09 ms
+64 bytes from 172.16.1.11: icmp_seq=3 ttl=64 time=1.56 ms
+
+--- 172.16.1.11 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2032ms
+rtt min/avg/max/mdev = 0.758/1.470/2.090/0.547 ms
+
+## pc1 wg show — fresh handshake (10s), confirming overlay stayed healthy through the underlay fault/restore cycle
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 52250
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 10 seconds ago
+  transfer: 192.95 KiB received, 50.90 KiB sent

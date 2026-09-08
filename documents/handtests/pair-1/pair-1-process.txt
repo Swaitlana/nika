@@ -5,7 +5,6 @@
 ### Overlay: peer removed from server vpn_server_1
 1. Inject:  `vpn_server_1 "wg set wg0 peer 1nsFyoZ... remove"`
 2. Confirm: `vpn_server_1 "wg show"` — pc1 peer gone, web-server peers intact
-3. Wait ~2 min → fingerprint set
 4. Restore: `vpn_server_1 "wg set wg0 peer 1nsFyoZ... allowed-ips 172.16.1.11/32 endpoint 10.0.0.2:51803"`
 5. Heal proof: ping 172.16.1.1 → 0% loss + fresh handshake
 

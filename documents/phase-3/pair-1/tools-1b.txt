@@ -1,0 +1,2565 @@
+### FINE and COARSE returned the same information under 1b — netstat and interface counters were character-identical on all 9 nodes, and the tunnel, config and web-test outputs matched apart from counters ticking up between calls; systemctl_ops remains FINE-only but reports "inactive (dead)" everywhere, so it carries no fault signal.
+
+### get_reachability goes red under 1b — pc1 and pc2 cannot reach vpn_server_1, and the web servers cannot reach pc1 — but web_server → vpn_server_1 still passes, because that traffic never crosses the withdrawn route; note that under 1a the same matrix was fully green, since it only tests underlay addresses and is blind to overlay faults.
+
+
+
+timestamp: 2026-09-06T23:16:44.590101+00:00
+session_id: 20260905-170215-4dea46
+lab_name: rip_small_internet_vpn__0905170207-616176
+label: 1b
+
+routers: ['external_router_1', 'gateway_router', 'router1', 'router2']
+vpn_hosts: ['vpn_server_1']
+client_hosts: ['pc1', 'pc2']
+web_hosts: ['web_server_1_1', 'web_server_1_2']
+wg_hosts (overlay): ['vpn_server_1', 'pc1', 'pc2', 'web_server_1_1', 'web_server_1_2']
+endpoint_hosts (net config): ['vpn_server_1', 'pc1', 'pc2', 'web_server_1_1', 'web_server_1_2']
+all_nodes (netstat/ip_addr): ['vpn_server_1', 'pc1', 'pc2', 'web_server_1_1', 'web_server_1_2', 'external_router_1', 'gateway_router', 'router1', 'router2']
+
+================================================================================
+COARSE SECTION
+================================================================================
+
+================================================================================
+COARSE: check_overlay()
+================================================================================
+===== vpn_server_1 : wg show =====
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:43958
+  allowed ips: 172.16.1.21/32
+  latest handshake: 13 minutes, 15 seconds ago
+  transfer: 107.75 KiB received, 14.49 KiB sent
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  endpoint: 10.0.0.2:52250
+  allowed ips: 172.16.1.11/32
+  latest handshake: 13 minutes, 18 seconds ago
+  transfer: 5.29 KiB received, 25.93 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:57482
+  allowed ips: 172.16.1.22/32
+  latest handshake: 23 hours, 12 minutes, 24 seconds ago
+  transfer: 71.10 KiB received, 8.80 KiB sent
+
+===== pc1 : wg show =====
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 52250
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 13 minutes, 18 seconds ago
+  transfer: 180.02 KiB received, 43.20 KiB sent
+
+===== pc2 : wg show =====
+
+
+===== web_server_1_1 : wg show =====
+interface: wg0
+  public key: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  private key: (hidden)
+  listening port: 43958
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 13 minutes, 15 seconds ago
+  transfer: 14.49 KiB received, 107.75 KiB sent
+
+===== web_server_1_2 : wg show =====
+interface: wg0
+  public key: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  private key: (hidden)
+  listening port: 57482
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 23 hours, 12 minutes, 24 seconds ago
+  transfer: 8.80 KiB received, 71.10 KiB sent
+
+================================================================================
+COARSE: check_underlay()
+================================================================================
+===== external_router_1 =====
+--- ip route ---
+Codes: K - kernel route, C - connected, L - local, S - static,
+       R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,
+       T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,
+       f - OpenFabric, t - Table-Direct,
+       > - selected route, * - FIB route, q - queued, r - rejected, b - backup
+       t - trapped, o - offload failure
+
+IPv4 unicast VRF default:
+R>* 10.0.0.0/24 [120/3] via 192.168.0.7, eth0, weight 1, 02:39:00
+R>* 10.0.1.0/24 [120/3] via 192.168.0.7, eth0, weight 1, 02:39:00
+C>* 20.0.0.0/24 is directly connected, br0, weight 1, 02:39:02
+L>* 20.0.0.1/32 is directly connected, br0, weight 1, 02:39:02
+R>* 192.168.0.0/31 [120/3] via 192.168.0.7, eth0, weight 1, 02:39:00
+R>* 192.168.0.2/31 [120/2] via 192.168.0.7, eth0, weight 1, 02:39:00
+R>* 192.168.0.4/31 [120/2] via 192.168.0.7, eth0, weight 1, 02:39:00
+C>* 192.168.0.6/31 is directly connected, eth0, weight 1, 02:39:02
+L>* 192.168.0.6/32 is directly connected, eth0, weight 1, 02:39:02
+--- running-config ---
+Building configuration...
+
+Current configuration:
+!
+frr version 10.5.3
+frr defaults traditional
+hostname external_router_1
+log file /var/log/frr/frr.log
+service integrated-vtysh-config
+!
+router rip
+ network 192.168.0.0/16
+ redistribute static
+exit
+!
+end
+--- show ip rip ---
+Codes: K - kernel route, C - connected, L - local, S - static,
+       R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,
+       T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,
+       f - OpenFabric, t - Table-Direct
+Sub-codes:
+      (n) - normal, (s) - static, (d) - default, (r) - redistribute,
+      (i) - interface
+
+     Network            Next Hop         Metric From            Tag Time
+R(n) 10.0.0.0/24        192.168.0.7           3 192.168.0.7       0 02:40
+R(n) 10.0.1.0/24        192.168.0.7           3 192.168.0.7       0 02:40
+R(n) 192.168.0.0/31     192.168.0.7           3 192.168.0.7       0 02:40
+R(n) 192.168.0.2/31     192.168.0.7           2 192.168.0.7       0 02:40
+R(n) 192.168.0.4/31     192.168.0.7           2 192.168.0.7       0 02:40
+C(i) 192.168.0.6/31     0.0.0.0               1 self              0
+--- show ip rip status ---
+Routing Protocol is "rip"
+  Sending updates every 30 seconds with +/-50%, next due in 24 seconds
+  Timeout after 180 seconds, garbage collect after 120 seconds
+  Outgoing update filter list for all interface is not set
+  Incoming update filter list for all interface is not set
+  Default redistribution metric is 1
+  Redistributing: static
+  Default version control: send version 2, receive any version 
+    Interface        Send  Recv   Key-chain
+    eth0             2     1 2    
+  Routing for Networks:
+    192.168.0.0/16
+  Routing Information Sources:
+    Gateway          BadPackets BadRoutes  Distance Last Update
+    192.168.0.7               0         0       120    00:00:20
+  Distance: (default is 120)
+--- show interface ---
+Interface br0 is up, line protocol is up
+  Link ups:       1    last: 2026/09/06 00:02:11.35
+  Link downs:     0    last: (never)
+  vrf: default
+  index 11 metric 0 mtu 1500 speed 10000 txqlen 1000
+  flags: <UP,LOWER_UP,BROADCAST,RUNNING,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  HWaddr: 02:a9:b8:db:99:ae
+  inet 20.0.0.1/24
+  Interface Type Bridge
+  Interface Slave Type None
+  Bridge VLAN-aware: no
+  protodown: off 
+Interface erspan0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 5 metric 0 mtu 1450 speed 0 txqlen 1000
+  flags: <BROADCAST,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface eth0 is up, line protocol is up
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 24 metric 0 mtu 1500 speed 10000 txqlen 1000
+  flags: <UP,LOWER_UP,BROADCAST,RUNNING,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  HWaddr: 3e:98:8b:71:f3:fb
+  inet 192.168.0.6/31
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface eth1 is up, line protocol is up
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 29 metric 0 mtu 1500 speed 10000 txqlen 1000
+  flags: <UP,LOWER_UP,BROADCAST,RUNNING,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  HWaddr: 02:a9:b8:db:99:ae
+  Interface Type Other
+  Interface Slave Type Bridge
+  Master interface: br0
+  protodown: off 
+Interface eth2 is up, line protocol is up
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 32 metric 0 mtu 1500 speed 10000 txqlen 1000
+  flags: <UP,LOWER_UP,BROADCAST,RUNNING,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  HWaddr: 42:af:5f:41:fa:8e
+  Interface Type Other
+  Interface Slave Type Bridge
+  Master interface: br0
+  protodown: off 
+Interface eth3 is up, line protocol is up
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 34 metric 0 mtu 1500 speed 10000 txqlen 1000
+  flags: <UP,LOWER_UP,BROADCAST,RUNNING,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  HWaddr: 92:27:6b:e1:d1:15
+  Interface Type Other
+  Interface Slave Type Bridge
+  Master interface: br0
+  protodown: off 
+Interface gre0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 3 metric 0 mtu 1476 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: GRE over IP
+  Interface Type GRE
+  Interface Slave Type None
+  protodown: off 
+Interface gretap0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 4 metric 0 mtu 1462 speed 0 txqlen 1000
+  flags: <BROADCAST,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface ip6_vti0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 7 metric 0 mtu 1428 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: IPIP6 Tunnel
+  Interface Type Other
+  Interface Slave Type...[truncated, 2353 chars omitted]
+
+===== gateway_router =====
+--- ip route ---
+Codes: K - kernel route, C - connected, L - local, S - static,
+       R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,
+       T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,
+       f - OpenFabric, t - Table-Direct,
+       > - selected route, * - FIB route, q - queued, r - rejected, b - backup
+       t - trapped, o - offload failure
+
+IPv4 unicast VRF default:
+R>* 10.0.0.0/24 [120/2] via 192.168.0.2, eth0, weight 1, 02:39:01
+R>* 10.0.1.0/24 [120/2] via 192.168.0.4, eth1, weight 1, 02:39:01
+R>* 192.168.0.0/31 [120/2] via 192.168.0.4, eth1, weight 1, 02:39:01
+C>* 192.168.0.2/31 is directly connected, eth0, weight 1, 02:39:02
+L>* 192.168.0.3/32 is directly connected, eth0, weight 1, 02:39:02
+C>* 192.168.0.4/31 is directly connected, eth1, weight 1, 02:39:02
+L>* 192.168.0.5/32 is directly connected, eth1, weight 1, 02:39:02
+C>* 192.168.0.6/31 is directly connected, eth2, weight 1, 02:39:02
+L>* 192.168.0.7/32 is directly connected, eth2, weight 1, 02:39:02
+--- running-config ---
+Building configuration...
+
+Current configuration:
+!
+frr version 10.5.3
+frr defaults traditional
+hostname gateway_router
+log file /var/log/frr/frr.log
+service integrated-vtysh-config
+!
+router rip
+ network 192.168.0.0/16
+ network None
+ redistribute static
+exit
+!
+end
+--- show ip rip ---
+Codes: K - kernel route, C - connected, L - local, S - static,
+       R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,
+       T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,
+       f - OpenFabric, t - Table-Direct
+Sub-codes:
+      (n) - normal, (s) - static, (d) - default, (r) - redistribute,
+      (i) - interface
+
+     Network            Next Hop         Metric From            Tag Time
+R(n) 10.0.0.0/24        192.168.0.2           2 192.168.0.2       0 02:32
+R(n) 10.0.1.0/24        192.168.0.4           2 192.168.0.4       0 02:36
+R(n) 192.168.0.0/31     192.168.0.4           2 192.168.0.4       0 02:36
+C(i) 192.168.0.2/31     0.0.0.0               1 self              0
+C(i) 192.168.0.4/31     0.0.0.0               1 self              0
+C(i) 192.168.0.6/31     0.0.0.0               1 self              0
+--- show ip rip status ---
+Routing Protocol is "rip"
+  Sending updates every 30 seconds with +/-50%, next due in 8 seconds
+  Timeout after 180 seconds, garbage collect after 120 seconds
+  Outgoing update filter list for all interface is not set
+  Incoming update filter list for all interface is not set
+  Default redistribution metric is 1
+  Redistributing: static
+  Default version control: send version 2, receive any version 
+    Interface        Send  Recv   Key-chain
+    eth0             2     1 2    
+    eth1             2     1 2    
+    eth2             2     1 2    
+  Routing for Networks:
+    192.168.0.0/16
+    None
+  Routing Information Sources:
+    Gateway          BadPackets BadRoutes  Distance Last Update
+    192.168.0.2               0         0       120    00:00:28
+    192.168.0.4               0         0       120    00:00:24
+  Distance: (default is 120)
+--- show interface ---
+Interface erspan0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 5 metric 0 mtu 1450 speed 0 txqlen 1000
+  flags: <BROADCAST,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface eth0 is up, line protocol is up
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 23 metric 0 mtu 1500 speed 10000 txqlen 1000
+  flags: <UP,LOWER_UP,BROADCAST,RUNNING,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  HWaddr: 9a:70:9f:49:de:fa
+  inet 192.168.0.3/31
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface eth1 is up, line protocol is up
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 28 metric 0 mtu 1500 speed 10000 txqlen 1000
+  flags: <UP,LOWER_UP,BROADCAST,RUNNING,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  HWaddr: de:08:77:11:29:d8
+  inet 192.168.0.5/31
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface eth2 is up, line protocol is up
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 30 metric 0 mtu 1500 speed 10000 txqlen 1000
+  flags: <UP,LOWER_UP,BROADCAST,RUNNING,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  HWaddr: c6:f1:70:75:0e:2e
+  inet 192.168.0.7/31
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface gre0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 3 metric 0 mtu 1476 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: GRE over IP
+  Interface Type GRE
+  Interface Slave Type None
+  protodown: off 
+Interface gretap0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 4 metric 0 mtu 1462 speed 0 txqlen 1000
+  flags: <BROADCAST,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface ip6_vti0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 7 metric 0 mtu 1428 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: IPIP6 Tunnel
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface ip6gre0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 10 metric 0 mtu 1448 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Unknown
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface ip6tnl0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 9 metric 0 mtu 1452 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: IPIP6 Tunnel
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface ip_vti0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 6 metric 0 mtu 1480 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is...[truncated, 1335 chars omitted]
+
+===== router1 =====
+--- ip route ---
+Codes: K - kernel route, C - connected, L - local, S - static,
+       R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,
+       T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,
+       f - OpenFabric, t - Table-Direct,
+       > - selected route, * - FIB route, q - queued, r - rejected, b - backup
+       t - trapped, o - offload failure
+
+IPv4 unicast VRF default:
+C>* 10.0.0.0/24 is directly connected, eth2, weight 1, 02:39:02
+L>* 10.0.0.1/32 is directly connected, eth2, weight 1, 02:39:02
+R>* 10.0.1.0/24 [120/2] via 192.168.0.1, eth0, weight 1, 02:39:01
+C>* 192.168.0.0/31 is directly connected, eth0, weight 1, 02:39:02
+L>* 192.168.0.0/32 is directly connected, eth0, weight 1, 02:39:02
+C>* 192.168.0.2/31 is directly connected, eth1, weight 1, 02:39:02
+L>* 192.168.0.2/32 is directly connected, eth1, weight 1, 02:39:02
+R>* 192.168.0.4/31 [120/2] via 192.168.0.1, eth0, weight 1, 02:39:01
+R>* 192.168.0.6/31 [120/2] via 192.168.0.3, eth1, weight 1, 02:39:00
+--- running-config ---
+Building configuration...
+
+Current configuration:
+!
+frr version 10.5.3
+frr defaults traditional
+hostname router1
+log file /var/log/frr/frr.log
+service integrated-vtysh-config
+!
+router rip
+ network 192.168.0.0/16
+ network 10.0.0.0/24
+ redistribute static
+exit
+!
+end
+--- show ip rip ---
+Codes: K - kernel route, C - connected, L - local, S - static,
+       R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,
+       T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,
+       f - OpenFabric, t - Table-Direct
+Sub-codes:
+      (n) - normal, (s) - static, (d) - default, (r) - redistribute,
+      (i) - interface
+
+     Network            Next Hop         Metric From            Tag Time
+C(i) 10.0.0.0/24        0.0.0.0               1 self              0
+R(n) 10.0.1.0/24        192.168.0.1           2 192.168.0.1       0 02:35
+C(i) 192.168.0.0/31     0.0.0.0               1 self              0
+C(i) 192.168.0.2/31     0.0.0.0               1 self              0
+R(n) 192.168.0.4/31     192.168.0.1           2 192.168.0.1       0 02:35
+R(n) 192.168.0.6/31     192.168.0.3           2 192.168.0.3       0 02:39
+--- show ip rip status ---
+Routing Protocol is "rip"
+  Sending updates every 30 seconds with +/-50%, next due in 7 seconds
+  Timeout after 180 seconds, garbage collect after 120 seconds
+  Outgoing update filter list for all interface is not set
+  Incoming update filter list for all interface is not set
+  Default redistribution metric is 1
+  Redistributing: static
+  Default version control: send version 2, receive any version 
+    Interface        Send  Recv   Key-chain
+    eth0             2     1 2    
+    eth1             2     1 2    
+    eth2             2     1 2    
+  Routing for Networks:
+    10.0.0.0/24
+    192.168.0.0/16
+  Routing Information Sources:
+    Gateway          BadPackets BadRoutes  Distance Last Update
+    192.168.0.1               0         0       120    00:00:24
+    192.168.0.3               0         0       120    00:00:20
+  Distance: (default is 120)
+--- show interface ---
+Interface erspan0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 5 metric 0 mtu 1450 speed 0 txqlen 1000
+  flags: <BROADCAST,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface eth0 is up, line protocol is up
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 22 metric 0 mtu 1500 speed 10000 txqlen 1000
+  flags: <UP,LOWER_UP,BROADCAST,RUNNING,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  HWaddr: 82:94:72:a6:f8:eb
+  inet 192.168.0.0/31
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface eth1 is up, line protocol is up
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 26 metric 0 mtu 1500 speed 10000 txqlen 1000
+  flags: <UP,LOWER_UP,BROADCAST,RUNNING,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  HWaddr: 82:e6:18:a7:89:c3
+  inet 192.168.0.2/31
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface eth2 is up, line protocol is up
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 27 metric 0 mtu 1500 speed 10000 txqlen 1000
+  flags: <UP,LOWER_UP,BROADCAST,RUNNING,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  HWaddr: 02:f3:35:08:d7:64
+  inet 10.0.0.1/24
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface gre0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 3 metric 0 mtu 1476 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: GRE over IP
+  Interface Type GRE
+  Interface Slave Type None
+  protodown: off 
+Interface gretap0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 4 metric 0 mtu 1462 speed 0 txqlen 1000
+  flags: <BROADCAST,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface ip6_vti0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 7 metric 0 mtu 1428 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: IPIP6 Tunnel
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface ip6gre0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 10 metric 0 mtu 1448 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Unknown
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface ip6tnl0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 9 metric 0 mtu 1452 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: IPIP6 Tunnel
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface ip_vti0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 6 metric 0 mtu 1480 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is No...[truncated, 1332 chars omitted]
+
+===== router2 =====
+--- ip route ---
+Codes: K - kernel route, C - connected, L - local, S - static,
+       R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,
+       T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,
+       f - OpenFabric, t - Table-Direct,
+       > - selected route, * - FIB route, q - queued, r - rejected, b - backup
+       t - trapped, o - offload failure
+
+IPv4 unicast VRF default:
+R>* 10.0.0.0/24 [120/2] via 192.168.0.0, eth0, weight 1, 02:39:00
+C>* 10.0.1.0/24 is directly connected, eth2, weight 1, 02:39:02
+L>* 10.0.1.1/32 is directly connected, eth2, weight 1, 02:39:02
+C>* 192.168.0.0/31 is directly connected, eth0, weight 1, 02:39:02
+L>* 192.168.0.1/32 is directly connected, eth0, weight 1, 02:39:02
+R>* 192.168.0.2/31 [120/2] via 192.168.0.0, eth0, weight 1, 02:39:00
+C>* 192.168.0.4/31 is directly connected, eth1, weight 1, 02:39:02
+L>* 192.168.0.4/32 is directly connected, eth1, weight 1, 02:39:02
+R>* 192.168.0.6/31 [120/2] via 192.168.0.5, eth1, weight 1, 02:39:00
+--- running-config ---
+Building configuration...
+
+Current configuration:
+!
+frr version 10.5.3
+frr defaults traditional
+hostname router2
+log file /var/log/frr/frr.log
+service integrated-vtysh-config
+!
+router rip
+ network 192.168.0.0/16
+ network 10.0.1.0/24
+ redistribute static
+exit
+!
+end
+--- show ip rip ---
+Codes: K - kernel route, C - connected, L - local, S - static,
+       R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,
+       T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,
+       f - OpenFabric, t - Table-Direct
+Sub-codes:
+      (n) - normal, (s) - static, (d) - default, (r) - redistribute,
+      (i) - interface
+
+     Network            Next Hop         Metric From            Tag Time
+R(n) 10.0.0.0/24        192.168.0.0           2 192.168.0.0       0 02:31
+C(i) 10.0.1.0/24        0.0.0.0               1 self              0
+C(i) 192.168.0.0/31     0.0.0.0               1 self              0
+R(n) 192.168.0.2/31     192.168.0.0           2 192.168.0.0       0 02:31
+C(i) 192.168.0.4/31     0.0.0.0               1 self              0
+R(n) 192.168.0.6/31     192.168.0.5           2 192.168.0.5       0 02:39
+--- show ip rip status ---
+Routing Protocol is "rip"
+  Sending updates every 30 seconds with +/-50%, next due in 10 seconds
+  Timeout after 180 seconds, garbage collect after 120 seconds
+  Outgoing update filter list for all interface is not set
+  Incoming update filter list for all interface is not set
+  Default redistribution metric is 1
+  Redistributing: static
+  Default version control: send version 2, receive any version 
+    Interface        Send  Recv   Key-chain
+    eth0             2     1 2    
+    eth1             2     1 2    
+    eth2             2     1 2    
+  Routing for Networks:
+    10.0.1.0/24
+    192.168.0.0/16
+  Routing Information Sources:
+    Gateway          BadPackets BadRoutes  Distance Last Update
+    192.168.0.0               0         0       120    00:00:28
+    192.168.0.5               0         0       120    00:00:20
+  Distance: (default is 120)
+--- show interface ---
+Interface erspan0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 5 metric 0 mtu 1450 speed 0 txqlen 1000
+  flags: <BROADCAST,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface eth0 is up, line protocol is up
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 25 metric 0 mtu 1500 speed 10000 txqlen 1000
+  flags: <UP,LOWER_UP,BROADCAST,RUNNING,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  HWaddr: 1a:e6:1e:ac:b6:34
+  inet 192.168.0.1/31
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface eth1 is up, line protocol is up
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 31 metric 0 mtu 1500 speed 10000 txqlen 1000
+  flags: <UP,LOWER_UP,BROADCAST,RUNNING,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  HWaddr: da:ab:2c:bf:cb:13
+  inet 192.168.0.4/31
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface eth2 is up, line protocol is up
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 33 metric 0 mtu 1500 speed 10000 txqlen 1000
+  flags: <UP,LOWER_UP,BROADCAST,RUNNING,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  HWaddr: 86:83:9e:0d:67:0c
+  inet 10.0.1.1/24
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface gre0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 3 metric 0 mtu 1476 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: GRE over IP
+  Interface Type GRE
+  Interface Slave Type None
+  protodown: off 
+Interface gretap0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 4 metric 0 mtu 1462 speed 0 txqlen 1000
+  flags: <BROADCAST,MULTICAST>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Ethernet
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface ip6_vti0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 7 metric 0 mtu 1428 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: IPIP6 Tunnel
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface ip6gre0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 10 metric 0 mtu 1448 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: Unknown
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface ip6tnl0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 9 metric 0 mtu 1452 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is Not specified by CLI
+  Shutdown config is Not specified by CLI
+  Type: IPIP6 Tunnel
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off 
+Interface ip_vti0 is down
+  Link ups:       0    last: (never)
+  Link downs:     0    last: (never)
+  vrf: default
+  index 6 metric 0 mtu 1480 speed 0 txqlen 1000
+  flags: <NOARP>
+  MPLS  Not specified by CLI
+  Multicast config is No...[truncated, 1332 chars omitted]
+
+================================================================================
+COARSE: check_endpoint()
+================================================================================
+===== reachability matrix =====
+{"hosts":{"pc1":"10.0.0.2","pc2":"10.0.1.2","vpn_server_1":"20.0.0.2","web_server_1_1":"20.0.0.3","web_server_1_2":"20.0.0.4"},"results":[{"src":"pc1","dst":"vpn_server_1","dst_ip":"20.0.0.2","tx":null,"rx":null,"loss_percent":null,"time_ms":null,"rtt_avg_ms":null,"rtt_min_ms":null,"rtt_max_ms":null,"rtt_mdev_ms":null,"status":"unknown"},{"src":"pc2","dst":"vpn_server_1","dst_ip":"20.0.0.2","tx":null,"rx":null,"loss_percent":null,"time_ms":null,"rtt_avg_ms":null,"rtt_min_ms":null,"rtt_max_ms":null,"rtt_mdev_ms":null,"status":"unknown"},{"src":"pc2","dst":"pc1","dst_ip":"10.0.0.2","tx":2,"rx":2,"loss_percent":0.0,"time_ms":1015.0,"rtt_avg_ms":2.76,"rtt_min_ms":0.871,"rtt_max_ms":4.65,"rtt_mdev_ms":1.889,"status":"ok"},{"src":"vpn_server_1","dst":"pc1","dst_ip":"10.0.0.2","tx":null,"rx":null,"loss_percent":null,"time_ms":null,"rtt_avg_ms":null,"rtt_min_ms":null,"rtt_max_ms":null,"rtt_mdev_ms":null,"status":"unknown"},{"src":"web_server_1_1","dst":"vpn_server_1","dst_ip":"20.0.0.2","tx":2,"rx":2,"loss_percent":0.0,"time_ms":1015.0,"rtt_avg_ms":2.525,"rtt_min_ms":0.625,"rtt_max_ms":4.426,"rtt_mdev_ms":1.9,"status":"ok"},{"src":"web_server_1_1","dst":"pc1","dst_ip":"10.0.0.2","tx":null,"rx":null,"loss_percent":null,"time_ms":null,"rtt_avg_ms":null,"rtt_min_ms":null,"rtt_max_ms":null,"rtt_mdev_ms":null,"status":"unknown"},{"src":"web_server_1_2","dst":"vpn_server_1","dst_ip":"20.0.0.2","tx":2,"rx":2,"loss_percent":0.0,"time_ms":1014.0,"rtt_avg_ms":2.022,"rtt_min_ms":0.589,"rtt_max_ms":3.455,"rtt_mdev_ms":1.433,"status":"ok"},{"src":"web_server_1_2","dst":"pc1","dst_ip":"10.0.0.2","tx":null,"rx":null,"loss_percent":null,"time_ms":null,"rtt_avg_ms":null,"rtt_min_ms":null,"rtt_max_ms":null,"rtt_mdev_ms":null,"status":"unknown"}]}
+
+===== vpn_server_1 : net config =====
+{'host_name': 'vpn_server_1', 'ifconfig': 'erspan0: flags=4098<BROADCAST,MULTICAST>  mtu 1450\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\neth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n        inet 20.0.0.2  netmask 255.255.255.0  broadcast 0.0.0.0\n        ether 72:8f:52:17:de:4a  txqueuelen 1000  (Ethernet)\n        RX packets 911  bytes 297620 (290.6 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 518  bytes 231176 (225.7 KiB)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngre0: flags=128<NOARP>  mtu 1476\n        unspec 00-00-00-00-00-00-80-B0-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngretap0: flags=4098<BROADCAST,MULTICAST>  mtu 1462\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6_vti0: flags=128<NOARP>  mtu 1428\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6gre0: flags=128<NOARP>  mtu 1448\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6tnl0: flags=128<NOARP>  mtu 1452\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip_vti0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nlo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536\n        inet 127.0.0.1  netmask 255.0.0.0\n        loop  txqueuelen 1000  (Local Loopback)\n        RX packets 3  bytes 336 (336.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 3  bytes 336 (336.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nsit0: flags=128<NOARP>  mtu 1480\n        sit  txqueuelen 1000  (IPv6-in-IPv4)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ntunl0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nwg0: flags=209<UP,POINTOPOINT,RUNNING,NOARP>  mtu 1420\n        inet 172.16.1.1  netmask 255.255.255.0  destination 172.16.1.1\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 458  bytes 208724 (203.8 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 450  bytes 208188 (203.3 KiB)\n        TX errors 3  dropped 0 overruns 0  carrier 0  collisions 0', 'ip_addr': '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n    inet 127.0.0.1/8 scope host lo\n       valid_lft forever preferred_lft forever\n2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000\n    link/gre 0.0.0.0 brd 0.0.0.0\n4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 3a8b:c581:9ec2::\n8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/sit 0.0.0.0 brd 0.0.0.0\n9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 6f9:c6fd:b4f8::\n10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000\n    link/gre6 :: brd :: permaddr bef4:d96a:f6dd::\n11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/none \n    inet 172.16.1.1/24 scope global wg0\n       valid_lft forever preferred_lft forever\n19: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000\n    link/ether 72:8f:52:17:de:4a brd ff:ff:ff:ff:ff:ff\n    inet 20.0.0.2/24 scope global eth0\n       valid_lft forever preferred_lft forever', 'ip_route': 'default via 20.0.0.1 dev eth0 \n20.0.0.0/24 dev eth0 proto kernel scope link src 20.0.0.2 \n172.16.1.0/24 dev wg0 proto kernel scope link src 172.16.1.1'}
+
+===== pc1 : net config =====
+{'host_name': 'pc1', 'ifconfig': 'erspan0: flags=4098<BROADCAST,MULTICAST>  mtu 1450\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\neth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n        inet 10.0.0.2  netmask 255.255.255.0  broadcast 0.0.0.0\n        ether ba:02:cb:77:a7:47  txqueuelen 1000  (Ethernet)\n        RX packets 676  bytes 263604 (257.4 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 459  bytes 65974 (64.4 KiB)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngre0: flags=128<NOARP>  mtu 1476\n        unspec 00-00-00-00-00-00-80-B0-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngretap0: flags=4098<BROADCAST,MULTICAST>  mtu 1462\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6_vti0: flags=128<NOARP>  mtu 1428\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6gre0: flags=128<NOARP>  mtu 1448\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6tnl0: flags=128<NOARP>  mtu 1452\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip_vti0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nlo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536\n        inet 127.0.0.1  netmask 255.0.0.0\n        loop  txqueuelen 1000  (Local Loopback)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nsit0: flags=128<NOARP>  mtu 1480\n        sit  txqueuelen 1000  (IPv6-in-IPv4)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ntunl0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nwg0: flags=209<UP,POINTOPOINT,RUNNING,NOARP>  mtu 1420\n        inet 172.16.1.11  netmask 255.255.255.0  destination 172.16.1.11\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 218  bytes 184336 (180.0 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 371  bytes 44232 (43.1 KiB)\n        TX errors 0  dropped 96 overruns 0  carrier 0  collisions 0', 'ip_addr': '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n    inet 127.0.0.1/8 scope host lo\n       valid_lft forever preferred_lft forever\n2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000\n    link/gre 0.0.0.0 brd 0.0.0.0\n4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr aa4a:9259:d952::\n8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/sit 0.0.0.0 brd 0.0.0.0\n9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 665b:5e07:5ce9::\n10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000\n    link/gre6 :: brd :: permaddr fae6:2630:aa17::\n11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/none \n    inet 172.16.1.11/24 scope global wg0\n       valid_lft forever preferred_lft forever\n17: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000\n    link/ether ba:02:cb:77:a7:47 brd ff:ff:ff:ff:ff:ff\n    inet 10.0.0.2/24 scope global eth0\n       valid_lft forever preferred_lft forever', 'ip_route': 'default via 10.0.0.1 dev eth0 \n10.0.0.0/24 dev eth0 proto kernel scope link src 10.0.0.2 \n172.16.1.0/24 dev wg0 proto kernel scope link src 172.16.1.11'}
+
+===== pc2 : net config =====
+{'host_name': 'pc2', 'ifconfig': 'erspan0: flags=4098<BROADCAST,MULTICAST>  mtu 1450\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\neth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n        inet 10.0.1.2  netmask 255.255.255.0  broadcast 0.0.0.0\n        ether ae:60:aa:53:7a:ff  txqueuelen 1000  (Ethernet)\n        RX packets 396  bytes 59534 (58.1 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 91  bytes 7294 (7.1 KiB)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngre0: flags=128<NOARP>  mtu 1476\n        unspec 00-00-00-00-00-00-80-B0-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngretap0: flags=4098<BROADCAST,MULTICAST>  mtu 1462\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6_vti0: flags=128<NOARP>  mtu 1428\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6gre0: flags=128<NOARP>  mtu 1448\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6tnl0: flags=128<NOARP>  mtu 1452\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip_vti0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nlo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536\n        inet 127.0.0.1  netmask 255.0.0.0\n        loop  txqueuelen 1000  (Local Loopback)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nsit0: flags=128<NOARP>  mtu 1480\n        sit  txqueuelen 1000  (IPv6-in-IPv4)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ntunl0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0', 'ip_addr': '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n    inet 127.0.0.1/8 scope host lo\n       valid_lft forever preferred_lft forever\n2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000\n    link/gre 0.0.0.0 brd 0.0.0.0\n4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 669:7eeb:72a2::\n8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/sit 0.0.0.0 brd 0.0.0.0\n9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 3a66:62da:9326::\n10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000\n    link/gre6 :: brd :: permaddr a2ac:94f6:12d::\n21: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000\n    link/ether ae:60:aa:53:7a:ff brd ff:ff:ff:ff:ff:ff\n    inet 10.0.1.2/24 scope global eth0\n       valid_lft forever preferred_lft forever', 'ip_route': 'default via 10.0.1.1 dev eth0 \n10.0.1.0/24 dev eth0 proto kernel scope link src 10.0.1.2'}
+
+===== web_server_1_1 : net config =====
+{'host_name': 'web_server_1_1', 'ifconfig': 'erspan0: flags=4098<BROADCAST,MULTICAST>  mtu 1450\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\neth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n        inet 20.0.0.3  netmask 255.255.255.0  broadcast 0.0.0.0\n        ether b2:b2:5b:aa:44:4f  txqueuelen 1000  (Ethernet)\n        RX packets 508  bytes 75722 (73.9 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 189  bytes 120062 (117.2 KiB)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngre0: flags=128<NOARP>  mtu 1476\n        unspec 00-00-00-00-00-00-80-B0-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngretap0: flags=4098<BROADCAST,MULTICAST>  mtu 1462\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6_vti0: flags=128<NOARP>  mtu 1428\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6gre0: flags=128<NOARP>  mtu 1448\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6tnl0: flags=128<NOARP>  mtu 1452\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip_vti0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nlo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536\n        inet 127.0.0.1  netmask 255.0.0.0\n        loop  txqueuelen 1000  (Local Loopback)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nsit0: flags=128<NOARP>  mtu 1480\n        sit  txqueuelen 1000  (IPv6-in-IPv4)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ntunl0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nwg0: flags=209<UP,POINTOPOINT,RUNNING,NOARP>  mtu 1420\n        inet 172.16.1.21  netmask 255.255.255.0  destination 172.16.1.21\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 143  bytes 14836 (14.4 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 132  bytes 110332 (107.7 KiB)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0', 'ip_addr': '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n    inet 127.0.0.1/8 scope host lo\n       valid_lft forever preferred_lft forever\n2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000\n    link/gre 0.0.0.0 brd 0.0.0.0\n4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 1ebd:cb5:33de::\n8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/sit 0.0.0.0 brd 0.0.0.0\n9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 4637:2d2b:7e2e::\n10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000\n    link/gre6 :: brd :: permaddr 2672:51ed:53fd::\n11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/none \n    inet 172.16.1.21/24 scope global wg0\n       valid_lft forever preferred_lft forever\n20: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000\n    link/ether b2:b2:5b:aa:44:4f brd ff:ff:ff:ff:ff:ff\n    inet 20.0.0.3/24 scope global eth0\n       valid_lft forever preferred_lft forever', 'ip_route': 'default via 20.0.0.1 dev eth0 \n20.0.0.0/24 dev eth0 proto kernel scope link src 20.0.0.3 \n172.16.1.0/24 dev wg0 proto kernel scope link src 172.16.1.21'}
+
+===== web_server_1_2 : net config =====
+{'host_name': 'web_server_1_2', 'ifconfig': 'erspan0: flags=4098<BROADCAST,MULTICAST>  mtu 1450\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\neth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n        inet 20.0.0.4  netmask 255.255.255.0  broadcast 0.0.0.0\n        ether 86:5f:c0:49:52:d2  txqueuelen 1000  (Ethernet)\n        RX packets 438  bytes 66646 (65.0 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 118  bytes 78884 (77.0 KiB)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngre0: flags=128<NOARP>  mtu 1476\n        unspec 00-00-00-00-00-00-80-B0-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngretap0: flags=4098<BROADCAST,MULTICAST>  mtu 1462\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6_vti0: flags=128<NOARP>  mtu 1428\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6gre0: flags=128<NOARP>  mtu 1448\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6tnl0: flags=128<NOARP>  mtu 1452\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip_vti0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nlo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536\n        inet 127.0.0.1  netmask 255.0.0.0\n        loop  txqueuelen 1000  (Local Loopback)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nsit0: flags=128<NOARP>  mtu 1480\n        sit  txqueuelen 1000  (IPv6-in-IPv4)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ntunl0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nwg0: flags=209<UP,POINTOPOINT,RUNNING,NOARP>  mtu 1420\n        inet 172.16.1.22  netmask 255.255.255.0  destination 172.16.1.22\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 89  bytes 9016 (8.8 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 81  bytes 72808 (71.1 KiB)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0', 'ip_addr': '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n    inet 127.0.0.1/8 scope host lo\n       valid_lft forever preferred_lft forever\n2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000\n    link/gre 0.0.0.0 brd 0.0.0.0\n4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 8a61:db0b:7076::\n8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/sit 0.0.0.0 brd 0.0.0.0\n9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 3a12:3671:2329::\n10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000\n    link/gre6 :: brd :: permaddr aa0e:462c:72e4::\n11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/none \n    inet 172.16.1.22/24 scope global wg0\n       valid_lft forever preferred_lft forever\n18: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000\n    link/ether 86:5f:c0:49:52:d2 brd ff:ff:ff:ff:ff:ff\n    inet 20.0.0.4/24 scope global eth0\n       valid_lft forever preferred_lft forever', 'ip_route': 'default via 20.0.0.1 dev eth0 \n20.0.0.0/24 dev eth0 proto kernel scope link src 20.0.0.4 \n172.16.1.0/24 dev wg0 proto kernel scope link src 172.16.1.22'}
+
+===== vpn_server_1 : netstat -tuln =====
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 127.0.0.11:38939        0.0.0.0:*               LISTEN     
+udp        0      0 127.0.0.11:35140        0.0.0.0:*                          
+udp        0      0 0.0.0.0:51820           0.0.0.0:*                          
+udp6       0      0 :::51820                :::*
+
+===== pc1 : netstat -tuln =====
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 127.0.0.11:34195        0.0.0.0:*               LISTEN     
+udp        0      0 127.0.0.11:51463        0.0.0.0:*                          
+udp        0      0 0.0.0.0:52250           0.0.0.0:*                          
+udp6       0      0 :::52250                :::*
+
+===== pc2 : netstat -tuln =====
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 127.0.0.11:32833        0.0.0.0:*               LISTEN     
+udp        0      0 127.0.0.11:46273        0.0.0.0:*
+
+===== web_server_1_1 : netstat -tuln =====
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 127.0.0.11:33239        0.0.0.0:*               LISTEN     
+tcp        0      0 172.16.1.21:80          0.0.0.0:*               LISTEN     
+udp        0      0 127.0.0.11:51749        0.0.0.0:*                          
+udp        0      0 0.0.0.0:43958           0.0.0.0:*                          
+udp6       0      0 :::43958                :::*
+
+===== web_server_1_2 : netstat -tuln =====
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 127.0.0.11:38799        0.0.0.0:*               LISTEN     
+tcp        0      0 172.16.1.22:80          0.0.0.0:*               LISTEN     
+udp        0      0 0.0.0.0:57482           0.0.0.0:*                          
+udp        0      0 127.0.0.11:59644        0.0.0.0:*                          
+udp6       0      0 :::57482                :::*
+
+===== external_router_1 : netstat -tuln =====
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 127.0.0.1:2616          0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2601          0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2602          0.0.0.0:*               LISTEN     
+tcp        0      0 0.0.0.0:2623            0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.11:45109        0.0.0.0:*               LISTEN     
+tcp6       0      0 :::2623                 :::*                    LISTEN     
+udp        0      0 0.0.0.0:520             0.0.0.0:*                          
+udp        0      0 127.0.0.11:54346        0.0.0.0:*
+
+===== gateway_router : netstat -tuln =====
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 127.0.0.1:2601          0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2602          0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2616          0.0.0.0:*               LISTEN     
+tcp        0      0 0.0.0.0:2623            0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.11:38715        0.0.0.0:*               LISTEN     
+tcp6       0      0 :::2623                 :::*                    LISTEN     
+udp        0      0 0.0.0.0:520             0.0.0.0:*                          
+udp        0      0 127.0.0.11:51986        0.0.0.0:*
+
+===== router1 : netstat -tuln =====
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 127.0.0.1:2602          0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2601          0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2616          0.0.0.0:*               LISTEN     
+tcp        0      0 0.0.0.0:2623            0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.11:36199        0.0.0.0:*               LISTEN     
+tcp6       0      0 :::2623                 :::*                    LISTEN     
+udp        0      0 127.0.0.11:43779        0.0.0.0:*                          
+udp        0      0 0.0.0.0:520             0.0.0.0:*
+
+===== router2 : netstat -tuln =====
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 0.0.0.0:2623            0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.11:44009        0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2616          0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2602          0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2601          0.0.0.0:*               LISTEN     
+tcp6       0      0 :::2623                 :::*                    LISTEN     
+udp        0      0 127.0.0.11:43769        0.0.0.0:*                          
+udp        0      0 0.0.0.0:520             0.0.0.0:*
+
+===== vpn_server_1 : ip -s addr =====
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+           336       3      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+           336       3      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 3a8b:c581:9ec2::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 6f9:c6fd:b4f8::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr bef4:d96a:f6dd::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/none 
+    inet 172.16.1.1/24 scope global wg0
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets ...[truncated, 699 chars omitted]
+
+===== pc1 : ip -s addr =====
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr aa4a:9259:d952::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 665b:5e07:5ce9::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr fae6:2630:aa17::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/none 
+    inet 172.16.1.11/24 scope global wg0
+       valid_lft forever preferred_lft forever
+    RX:  bytes packet...[truncated, 701 chars omitted]
+
+===== pc2 : ip -s addr =====
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 669:7eeb:72a2::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 3a66:62da:9326::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr a2ac:94f6:12d::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+21: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether ae:60:aa:53:7a:ff brd ff:ff:ff:ff:ff:ff
+    inet 10.0.1.2/24 scope global eth0
+       valid_lft forever prefer...[truncated, 254 chars omitted]
+
+===== web_server_1_1 : ip -s addr =====
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 1ebd:cb5:33de::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 4637:2d2b:7e2e::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr 2672:51ed:53fd::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/none 
+    inet 172.16.1.21/24 scope global wg0
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets...[truncated, 700 chars omitted]
+
+===== web_server_1_2 : ip -s addr =====
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 8a61:db0b:7076::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 3a12:3671:2329::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr aa0e:462c:72e4::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/none 
+    inet 172.16.1.22/24 scope global wg0
+       valid_lft forever preferred_lft forever
+    RX:  bytes packet...[truncated, 701 chars omitted]
+
+===== external_router_1 : ip -s addr =====
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 5e33:ed45:1522::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 9226:c14a:b09d::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr da92:5eda:120f::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+11: br0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether 02:a9:b8:db:99:ae brd ff:ff:ff:ff:ff:ff
+    inet 20.0.0.1/24 scope global br0
+       valid_lft forever preferred...[truncated, 1965 chars omitted]
+
+===== gateway_router : ip -s addr =====
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 9253:3a02:d249::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 866a:224a:d54::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr da6f:4ef4:780e::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+23: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 9a:70:9f:49:de:fa brd ff:ff:ff:ff:ff:ff
+    inet 192.168.0.3/31 scope global eth0
+       valid_lft forever pr...[truncated, 1232 chars omitted]
+
+===== router1 : ip -s addr =====
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr def9:452a:f2b1::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr ee5e:46b0:5e32::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr 3247:b3ba:9a9f::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+22: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 82:94:72:a6:f8:eb brd ff:ff:ff:ff:ff:ff
+    inet 192.168.0.0/31 scope global eth0
+       valid_lft forever p...[truncated, 1230 chars omitted]
+
+===== router2 : ip -s addr =====
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr c2aa:7972:9a1f::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr d64b:e8d7:8829::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr 9a67:563c:cf7::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+25: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 1a:e6:1e:ac:b6:34 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.0.1/31 scope global eth0
+       valid_lft forever pr...[truncated, 1229 chars omitted]
+
+===== pc1 -> web_server_1_1 (http://172.16.1.21:80) =====
+namelookup:0.000009, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:5.004751
+namelookup:0.000009, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:5.002501
+namelookup:0.000018, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:5.006020
+
+===== pc2 -> web_server_1_1 (http://172.16.1.21:80) =====
+namelookup:0.000011, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:0.000266
+namelookup:0.000010, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:1.024671
+namelookup:0.000011, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:1.010403
+
+===== pc1 -> web_server_1_2 (http://172.16.1.22:80) =====
+namelookup:0.000010, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:5.005840
+namelookup:0.000017, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:5.003451
+namelookup:0.000018, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:5.006233
+
+===== pc2 -> web_server_1_2 (http://172.16.1.22:80) =====
+namelookup:0.000015, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:0.000365
+namelookup:0.000010, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:1.005989
+namelookup:0.000018, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:1.005044
+
+================================================================================
+FINE SECTION
+================================================================================
+
+================================================================================
+FINE: get_reachability()
+================================================================================
+{"hosts":{"pc1":"10.0.0.2","pc2":"10.0.1.2","vpn_server_1":"20.0.0.2","web_server_1_1":"20.0.0.3","web_server_1_2":"20.0.0.4"},"results":[{"src":"pc1","dst":"web_server_1_2","dst_ip":"20.0.0.4","tx":null,"rx":null,"loss_percent":null,"time_ms":null,"rtt_avg_ms":null,"rtt_min_ms":null,"rtt_max_ms":null,"rtt_mdev_ms":null,"status":"unknown"},{"src":"pc1","dst":"web_server_1_1","dst_ip":"20.0.0.3","tx":null,"rx":null,"loss_percent":null,"time_ms":null,"rtt_avg_ms":null,"rtt_min_ms":null,"rtt_max_ms":null,"rtt_mdev_ms":null,"status":"unknown"},{"src":"pc2","dst":"web_server_1_2","dst_ip":"20.0.0.4","tx":null,"rx":null,"loss_percent":null,"time_ms":null,"rtt_avg_ms":null,"rtt_min_ms":null,"rtt_max_ms":null,"rtt_mdev_ms":null,"status":"unknown"},{"src":"pc2","dst":"web_server_1_1","dst_ip":"20.0.0.3","tx":null,"rx":null,"loss_percent":null,"time_ms":null,"rtt_avg_ms":null,"rtt_min_ms":null,"rtt_max_ms":null,"rtt_mdev_ms":null,"status":"unknown"},{"src":"vpn_server_1","dst":"web_server_1_2","dst_ip":"20.0.0.4","tx":2,"rx":2,"loss_percent":0.0,"time_ms":1004.0,"rtt_avg_ms":0.955,"rtt_min_ms":0.276,"rtt_max_ms":1.634,"rtt_mdev_ms":0.679,"status":"ok"},{"src":"vpn_server_1","dst":"web_server_1_1","dst_ip":"20.0.0.3","tx":2,"rx":2,"loss_percent":0.0,"time_ms":1003.0,"rtt_avg_ms":1.477,"rtt_min_ms":0.323,"rtt_max_ms":2.631,"rtt_mdev_ms":1.154,"status":"ok"},{"src":"web_server_1_1","dst":"web_server_1_2","dst_ip":"20.0.0.4","tx":2,"rx":2,"loss_percent":0.0,"time_ms":1007.0,"rtt_avg_ms":1.353,"rtt_min_ms":0.595,"rtt_max_ms":2.112,"rtt_mdev_ms":0.758,"status":"ok"},{"src":"web_server_1_2","dst":"web_server_1_1","dst_ip":"20.0.0.3","tx":2,"rx":2,"loss_percent":0.0,"time_ms":1002.0,"rtt_avg_ms":1.451,"rtt_min_ms":0.213,"rtt_max_ms":2.689,"rtt_mdev_ms":1.238,"status":"ok"}]}
+
+================================================================================
+FINE: get_tunnel_status(host_name='vpn_server_1')
+================================================================================
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:43958
+  allowed ips: 172.16.1.21/32
+  latest handshake: 14 minutes, 14 seconds ago
+  transfer: 107.75 KiB received, 14.49 KiB sent
+
+peer: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  endpoint: 10.0.0.2:52250
+  allowed ips: 172.16.1.11/32
+  latest handshake: 14 minutes, 17 seconds ago
+  transfer: 5.29 KiB received, 25.93 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:57482
+  allowed ips: 172.16.1.22/32
+  latest handshake: 23 hours, 13 minutes, 23 seconds ago
+  transfer: 71.10 KiB received, 8.80 KiB sent
+
+================================================================================
+FINE: get_tunnel_status(host_name='pc1')
+================================================================================
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 52250
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 14 minutes, 17 seconds ago
+  transfer: 180.02 KiB received, 44.50 KiB sent
+
+================================================================================
+FINE: get_tunnel_status(host_name='pc2')
+================================================================================
+
+
+================================================================================
+FINE: get_tunnel_status(host_name='web_server_1_1')
+================================================================================
+interface: wg0
+  public key: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  private key: (hidden)
+  listening port: 43958
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 14 minutes, 14 seconds ago
+  transfer: 14.49 KiB received, 107.75 KiB sent
+
+================================================================================
+FINE: get_tunnel_status(host_name='web_server_1_2')
+================================================================================
+interface: wg0
+  public key: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  private key: (hidden)
+  listening port: 57482
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 23 hours, 13 minutes, 23 seconds ago
+  transfer: 8.80 KiB received, 71.10 KiB sent
+
+================================================================================
+FINE: get_host_net_config(host_name='vpn_server_1')
+================================================================================
+{'host_name': 'vpn_server_1', 'ifconfig': 'erspan0: flags=4098<BROADCAST,MULTICAST>  mtu 1450\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\neth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n        inet 20.0.0.2  netmask 255.255.255.0  broadcast 0.0.0.0\n        ether 72:8f:52:17:de:4a  txqueuelen 1000  (Ethernet)\n        RX packets 919  bytes 298252 (291.2 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 526  bytes 231736 (226.3 KiB)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngre0: flags=128<NOARP>  mtu 1476\n        unspec 00-00-00-00-00-00-80-B0-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngretap0: flags=4098<BROADCAST,MULTICAST>  mtu 1462\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6_vti0: flags=128<NOARP>  mtu 1428\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6gre0: flags=128<NOARP>  mtu 1448\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6tnl0: flags=128<NOARP>  mtu 1452\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip_vti0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nlo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536\n        inet 127.0.0.1  netmask 255.0.0.0\n        loop  txqueuelen 1000  (Local Loopback)\n        RX packets 3  bytes 336 (336.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 3  bytes 336 (336.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nsit0: flags=128<NOARP>  mtu 1480\n        sit  txqueuelen 1000  (IPv6-in-IPv4)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ntunl0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nwg0: flags=209<UP,POINTOPOINT,RUNNING,NOARP>  mtu 1420\n        inet 172.16.1.1  netmask 255.255.255.0  destination 172.16.1.1\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 458  bytes 208724 (203.8 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 450  bytes 208188 (203.3 KiB)\n        TX errors 3  dropped 0 overruns 0  carrier 0  collisions 0', 'ip_addr': '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n    inet 127.0.0.1/8 scope host lo\n       valid_lft forever preferred_lft forever\n2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000\n    link/gre 0.0.0.0 brd 0.0.0.0\n4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 3a8b:c581:9ec2::\n8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/sit 0.0.0.0 brd 0.0.0.0\n9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 6f9:c6fd:b4f8::\n10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000\n    link/gre6 :: brd :: permaddr bef4:d96a:f6dd::\n11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/none \n    inet 172.16.1.1/24 scope global wg0\n       valid_lft forever preferred_lft forever\n19: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000\n    link/ether 72:8f:52:17:de:4a brd ff:ff:ff:ff:ff:ff\n    inet 20.0.0.2/24 scope global eth0\n       valid_lft forever preferred_lft forever', 'ip_route': 'default via 20.0.0.1 dev eth0 \n20.0.0.0/24 dev eth0 proto kernel scope link src 20.0.0.2 \n172.16.1.0/24 dev wg0 proto kernel scope link src 172.16.1.1'}
+
+================================================================================
+FINE: get_host_net_config(host_name='pc1')
+================================================================================
+{'host_name': 'pc1', 'ifconfig': 'erspan0: flags=4098<BROADCAST,MULTICAST>  mtu 1450\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\neth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n        inet 10.0.0.2  netmask 255.255.255.0  broadcast 0.0.0.0\n        ether ba:02:cb:77:a7:47  txqueuelen 1000  (Ethernet)\n        RX packets 688  bytes 265806 (259.5 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 473  bytes 68118 (66.5 KiB)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngre0: flags=128<NOARP>  mtu 1476\n        unspec 00-00-00-00-00-00-80-B0-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngretap0: flags=4098<BROADCAST,MULTICAST>  mtu 1462\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6_vti0: flags=128<NOARP>  mtu 1428\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6gre0: flags=128<NOARP>  mtu 1448\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6tnl0: flags=128<NOARP>  mtu 1452\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip_vti0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nlo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536\n        inet 127.0.0.1  netmask 255.0.0.0\n        loop  txqueuelen 1000  (Local Loopback)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nsit0: flags=128<NOARP>  mtu 1480\n        sit  txqueuelen 1000  (IPv6-in-IPv4)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ntunl0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nwg0: flags=209<UP,POINTOPOINT,RUNNING,NOARP>  mtu 1420\n        inet 172.16.1.11  netmask 255.255.255.0  destination 172.16.1.11\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 218  bytes 184336 (180.0 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 380  bytes 45564 (44.4 KiB)\n        TX errors 0  dropped 96 overruns 0  carrier 0  collisions 0', 'ip_addr': '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n    inet 127.0.0.1/8 scope host lo\n       valid_lft forever preferred_lft forever\n2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000\n    link/gre 0.0.0.0 brd 0.0.0.0\n4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr aa4a:9259:d952::\n8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/sit 0.0.0.0 brd 0.0.0.0\n9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 665b:5e07:5ce9::\n10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000\n    link/gre6 :: brd :: permaddr fae6:2630:aa17::\n11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/none \n    inet 172.16.1.11/24 scope global wg0\n       valid_lft forever preferred_lft forever\n17: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000\n    link/ether ba:02:cb:77:a7:47 brd ff:ff:ff:ff:ff:ff\n    inet 10.0.0.2/24 scope global eth0\n       valid_lft forever preferred_lft forever', 'ip_route': 'default via 10.0.0.1 dev eth0 \n10.0.0.0/24 dev eth0 proto kernel scope link src 10.0.0.2 \n172.16.1.0/24 dev wg0 proto kernel scope link src 172.16.1.11'}
+
+================================================================================
+FINE: get_host_net_config(host_name='pc2')
+================================================================================
+{'host_name': 'pc2', 'ifconfig': 'erspan0: flags=4098<BROADCAST,MULTICAST>  mtu 1450\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\neth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n        inet 10.0.1.2  netmask 255.255.255.0  broadcast 0.0.0.0\n        ether ae:60:aa:53:7a:ff  txqueuelen 1000  (Ethernet)\n        RX packets 406  bytes 60538 (59.1 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 107  bytes 8510 (8.3 KiB)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngre0: flags=128<NOARP>  mtu 1476\n        unspec 00-00-00-00-00-00-80-B0-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngretap0: flags=4098<BROADCAST,MULTICAST>  mtu 1462\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6_vti0: flags=128<NOARP>  mtu 1428\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6gre0: flags=128<NOARP>  mtu 1448\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6tnl0: flags=128<NOARP>  mtu 1452\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip_vti0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nlo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536\n        inet 127.0.0.1  netmask 255.0.0.0\n        loop  txqueuelen 1000  (Local Loopback)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nsit0: flags=128<NOARP>  mtu 1480\n        sit  txqueuelen 1000  (IPv6-in-IPv4)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ntunl0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0', 'ip_addr': '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n    inet 127.0.0.1/8 scope host lo\n       valid_lft forever preferred_lft forever\n2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000\n    link/gre 0.0.0.0 brd 0.0.0.0\n4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 669:7eeb:72a2::\n8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/sit 0.0.0.0 brd 0.0.0.0\n9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 3a66:62da:9326::\n10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000\n    link/gre6 :: brd :: permaddr a2ac:94f6:12d::\n21: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000\n    link/ether ae:60:aa:53:7a:ff brd ff:ff:ff:ff:ff:ff\n    inet 10.0.1.2/24 scope global eth0\n       valid_lft forever preferred_lft forever', 'ip_route': 'default via 10.0.1.1 dev eth0 \n10.0.1.0/24 dev eth0 proto kernel scope link src 10.0.1.2'}
+
+================================================================================
+FINE: get_host_net_config(host_name='web_server_1_1')
+================================================================================
+{'host_name': 'web_server_1_1', 'ifconfig': 'erspan0: flags=4098<BROADCAST,MULTICAST>  mtu 1450\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\neth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n        inet 20.0.0.3  netmask 255.255.255.0  broadcast 0.0.0.0\n        ether b2:b2:5b:aa:44:4f  txqueuelen 1000  (Ethernet)\n        RX packets 518  bytes 76550 (74.7 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 199  bytes 120818 (117.9 KiB)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngre0: flags=128<NOARP>  mtu 1476\n        unspec 00-00-00-00-00-00-80-B0-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngretap0: flags=4098<BROADCAST,MULTICAST>  mtu 1462\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6_vti0: flags=128<NOARP>  mtu 1428\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6gre0: flags=128<NOARP>  mtu 1448\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6tnl0: flags=128<NOARP>  mtu 1452\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip_vti0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nlo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536\n        inet 127.0.0.1  netmask 255.0.0.0\n        loop  txqueuelen 1000  (Local Loopback)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nsit0: flags=128<NOARP>  mtu 1480\n        sit  txqueuelen 1000  (IPv6-in-IPv4)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ntunl0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nwg0: flags=209<UP,POINTOPOINT,RUNNING,NOARP>  mtu 1420\n        inet 172.16.1.21  netmask 255.255.255.0  destination 172.16.1.21\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 143  bytes 14836 (14.4 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 132  bytes 110332 (107.7 KiB)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0', 'ip_addr': '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n    inet 127.0.0.1/8 scope host lo\n       valid_lft forever preferred_lft forever\n2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000\n    link/gre 0.0.0.0 brd 0.0.0.0\n4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 1ebd:cb5:33de::\n8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/sit 0.0.0.0 brd 0.0.0.0\n9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 4637:2d2b:7e2e::\n10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000\n    link/gre6 :: brd :: permaddr 2672:51ed:53fd::\n11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/none \n    inet 172.16.1.21/24 scope global wg0\n       valid_lft forever preferred_lft forever\n20: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000\n    link/ether b2:b2:5b:aa:44:4f brd ff:ff:ff:ff:ff:ff\n    inet 20.0.0.3/24 scope global eth0\n       valid_lft forever preferred_lft forever', 'ip_route': 'default via 20.0.0.1 dev eth0 \n20.0.0.0/24 dev eth0 proto kernel scope link src 20.0.0.3 \n172.16.1.0/24 dev wg0 proto kernel scope link src 172.16.1.21'}
+
+================================================================================
+FINE: get_host_net_config(host_name='web_server_1_2')
+================================================================================
+{'host_name': 'web_server_1_2', 'ifconfig': 'erspan0: flags=4098<BROADCAST,MULTICAST>  mtu 1450\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\neth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n        inet 20.0.0.4  netmask 255.255.255.0  broadcast 0.0.0.0\n        ether 86:5f:c0:49:52:d2  txqueuelen 1000  (Ethernet)\n        RX packets 448  bytes 67474 (65.8 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 128  bytes 79640 (77.7 KiB)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngre0: flags=128<NOARP>  mtu 1476\n        unspec 00-00-00-00-00-00-80-B0-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ngretap0: flags=4098<BROADCAST,MULTICAST>  mtu 1462\n        ether 00:00:00:00:00:00  txqueuelen 1000  (Ethernet)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6_vti0: flags=128<NOARP>  mtu 1428\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6gre0: flags=128<NOARP>  mtu 1448\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip6tnl0: flags=128<NOARP>  mtu 1452\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nip_vti0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nlo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536\n        inet 127.0.0.1  netmask 255.0.0.0\n        loop  txqueuelen 1000  (Local Loopback)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nsit0: flags=128<NOARP>  mtu 1480\n        sit  txqueuelen 1000  (IPv6-in-IPv4)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\ntunl0: flags=128<NOARP>  mtu 1480\n        tunnel   txqueuelen 1000  (IPIP Tunnel)\n        RX packets 0  bytes 0 (0.0 B)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 0  bytes 0 (0.0 B)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0\n\nwg0: flags=209<UP,POINTOPOINT,RUNNING,NOARP>  mtu 1420\n        inet 172.16.1.22  netmask 255.255.255.0  destination 172.16.1.22\n        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 1000  (UNSPEC)\n        RX packets 89  bytes 9016 (8.8 KiB)\n        RX errors 0  dropped 0  overruns 0  frame 0\n        TX packets 81  bytes 72808 (71.1 KiB)\n        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0', 'ip_addr': '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n    inet 127.0.0.1/8 scope host lo\n       valid_lft forever preferred_lft forever\n2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000\n    link/gre 0.0.0.0 brd 0.0.0.0\n4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000\n    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff\n6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/ipip 0.0.0.0 brd 0.0.0.0\n7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 8a61:db0b:7076::\n8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000\n    link/sit 0.0.0.0 brd 0.0.0.0\n9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000\n    link/tunnel6 :: brd :: permaddr 3a12:3671:2329::\n10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000\n    link/gre6 :: brd :: permaddr aa0e:462c:72e4::\n11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/none \n    inet 172.16.1.22/24 scope global wg0\n       valid_lft forever preferred_lft forever\n18: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000\n    link/ether 86:5f:c0:49:52:d2 brd ff:ff:ff:ff:ff:ff\n    inet 20.0.0.4/24 scope global eth0\n       valid_lft forever preferred_lft forever', 'ip_route': 'default via 20.0.0.1 dev eth0 \n20.0.0.0/24 dev eth0 proto kernel scope link src 20.0.0.4 \n172.16.1.0/24 dev wg0 proto kernel scope link src 172.16.1.22'}
+
+================================================================================
+FINE: netstat(host_name='vpn_server_1')
+================================================================================
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 127.0.0.11:38939        0.0.0.0:*               LISTEN     
+udp        0      0 127.0.0.11:35140        0.0.0.0:*                          
+udp        0      0 0.0.0.0:51820           0.0.0.0:*                          
+udp6       0      0 :::51820                :::*
+
+================================================================================
+FINE: netstat(host_name='pc1')
+================================================================================
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 127.0.0.11:34195        0.0.0.0:*               LISTEN     
+udp        0      0 127.0.0.11:51463        0.0.0.0:*                          
+udp        0      0 0.0.0.0:52250           0.0.0.0:*                          
+udp6       0      0 :::52250                :::*
+
+================================================================================
+FINE: netstat(host_name='pc2')
+================================================================================
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 127.0.0.11:32833        0.0.0.0:*               LISTEN     
+udp        0      0 127.0.0.11:46273        0.0.0.0:*
+
+================================================================================
+FINE: netstat(host_name='web_server_1_1')
+================================================================================
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 127.0.0.11:33239        0.0.0.0:*               LISTEN     
+tcp        0      0 172.16.1.21:80          0.0.0.0:*               LISTEN     
+udp        0      0 127.0.0.11:51749        0.0.0.0:*                          
+udp        0      0 0.0.0.0:43958           0.0.0.0:*                          
+udp6       0      0 :::43958                :::*
+
+================================================================================
+FINE: netstat(host_name='web_server_1_2')
+================================================================================
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 127.0.0.11:38799        0.0.0.0:*               LISTEN     
+tcp        0      0 172.16.1.22:80          0.0.0.0:*               LISTEN     
+udp        0      0 0.0.0.0:57482           0.0.0.0:*                          
+udp        0      0 127.0.0.11:59644        0.0.0.0:*                          
+udp6       0      0 :::57482                :::*
+
+================================================================================
+FINE: netstat(host_name='external_router_1')
+================================================================================
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 127.0.0.1:2616          0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2601          0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2602          0.0.0.0:*               LISTEN     
+tcp        0      0 0.0.0.0:2623            0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.11:45109        0.0.0.0:*               LISTEN     
+tcp6       0      0 :::2623                 :::*                    LISTEN     
+udp        0      0 0.0.0.0:520             0.0.0.0:*                          
+udp        0      0 127.0.0.11:54346        0.0.0.0:*
+
+================================================================================
+FINE: netstat(host_name='gateway_router')
+================================================================================
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 127.0.0.1:2601          0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2602          0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2616          0.0.0.0:*               LISTEN     
+tcp        0      0 0.0.0.0:2623            0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.11:38715        0.0.0.0:*               LISTEN     
+tcp6       0      0 :::2623                 :::*                    LISTEN     
+udp        0      0 0.0.0.0:520             0.0.0.0:*                          
+udp        0      0 127.0.0.11:51986        0.0.0.0:*
+
+================================================================================
+FINE: netstat(host_name='router1')
+================================================================================
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 127.0.0.1:2602          0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2601          0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2616          0.0.0.0:*               LISTEN     
+tcp        0      0 0.0.0.0:2623            0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.11:36199        0.0.0.0:*               LISTEN     
+tcp6       0      0 :::2623                 :::*                    LISTEN     
+udp        0      0 127.0.0.11:43779        0.0.0.0:*                          
+udp        0      0 0.0.0.0:520             0.0.0.0:*
+
+================================================================================
+FINE: netstat(host_name='router2')
+================================================================================
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State      
+tcp        0      0 0.0.0.0:2623            0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.11:44009        0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2616          0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2602          0.0.0.0:*               LISTEN     
+tcp        0      0 127.0.0.1:2601          0.0.0.0:*               LISTEN     
+tcp6       0      0 :::2623                 :::*                    LISTEN     
+udp        0      0 127.0.0.11:43769        0.0.0.0:*                          
+udp        0      0 0.0.0.0:520             0.0.0.0:*
+
+================================================================================
+FINE: ip_addr_statistics(host_name='vpn_server_1')
+================================================================================
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+           336       3      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+           336       3      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 3a8b:c581:9ec2::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 6f9:c6fd:b4f8::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr bef4:d96a:f6dd::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/none 
+    inet 172.16.1.1/24 scope global wg0
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets ...[truncated, 699 chars omitted]
+
+================================================================================
+FINE: ip_addr_statistics(host_name='pc1')
+================================================================================
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr aa4a:9259:d952::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 665b:5e07:5ce9::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr fae6:2630:aa17::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/none 
+    inet 172.16.1.11/24 scope global wg0
+       valid_lft forever preferred_lft forever
+    RX:  bytes packet...[truncated, 701 chars omitted]
+
+================================================================================
+FINE: ip_addr_statistics(host_name='pc2')
+================================================================================
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 669:7eeb:72a2::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 3a66:62da:9326::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr a2ac:94f6:12d::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+21: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether ae:60:aa:53:7a:ff brd ff:ff:ff:ff:ff:ff
+    inet 10.0.1.2/24 scope global eth0
+       valid_lft forever prefer...[truncated, 254 chars omitted]
+
+================================================================================
+FINE: ip_addr_statistics(host_name='web_server_1_1')
+================================================================================
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 1ebd:cb5:33de::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 4637:2d2b:7e2e::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr 2672:51ed:53fd::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/none 
+    inet 172.16.1.21/24 scope global wg0
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets...[truncated, 700 chars omitted]
+
+================================================================================
+FINE: ip_addr_statistics(host_name='web_server_1_2')
+================================================================================
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 8a61:db0b:7076::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 3a12:3671:2329::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr aa0e:462c:72e4::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+11: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/none 
+    inet 172.16.1.22/24 scope global wg0
+       valid_lft forever preferred_lft forever
+    RX:  bytes packet...[truncated, 701 chars omitted]
+
+================================================================================
+FINE: ip_addr_statistics(host_name='external_router_1')
+================================================================================
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 5e33:ed45:1522::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 9226:c14a:b09d::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr da92:5eda:120f::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+11: br0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether 02:a9:b8:db:99:ae brd ff:ff:ff:ff:ff:ff
+    inet 20.0.0.1/24 scope global br0
+       valid_lft forever preferred...[truncated, 1965 chars omitted]
+
+================================================================================
+FINE: ip_addr_statistics(host_name='gateway_router')
+================================================================================
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 9253:3a02:d249::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr 866a:224a:d54::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr da6f:4ef4:780e::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+23: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 9a:70:9f:49:de:fa brd ff:ff:ff:ff:ff:ff
+    inet 192.168.0.3/31 scope global eth0
+       valid_lft forever pr...[truncated, 1232 chars omitted]
+
+================================================================================
+FINE: ip_addr_statistics(host_name='router1')
+================================================================================
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr def9:452a:f2b1::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr ee5e:46b0:5e32::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr 3247:b3ba:9a9f::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+22: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 82:94:72:a6:f8:eb brd ff:ff:ff:ff:ff:ff
+    inet 192.168.0.0/31 scope global eth0
+       valid_lft forever p...[truncated, 1230 chars omitted]
+
+================================================================================
+FINE: ip_addr_statistics(host_name='router2')
+================================================================================
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1000
+    link/gre 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+5: erspan0@NONE: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+6: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+7: ip6_vti0@NONE: <NOARP> mtu 1428 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr c2aa:7972:9a1f::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+8: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+9: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1000
+    link/tunnel6 :: brd :: permaddr d64b:e8d7:8829::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+10: ip6gre0@NONE: <NOARP> mtu 1448 qdisc noop state DOWN group default qlen 1000
+    link/gre6 :: brd :: permaddr 9a67:563c:cf7::
+    RX:  bytes packets errors dropped  missed   mcast           
+             0       0      0       0       0       0 
+    TX:  bytes packets errors dropped carrier collsns           
+             0       0      0       0       0       0 
+25: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 1a:e6:1e:ac:b6:34 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.0.1/31 scope global eth0
+       valid_lft forever pr...[truncated, 1229 chars omitted]
+
+================================================================================
+FINE: curl_web_test(host_name='pc1', url='http://172.16.1.21:80', times=3)
+================================================================================
+namelookup:0.000009, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:5.005065
+namelookup:0.000013, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:5.003978
+namelookup:0.000013, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:5.001585
+
+================================================================================
+FINE: curl_web_test(host_name='pc2', url='http://172.16.1.21:80', times=3)
+================================================================================
+namelookup:0.000013, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:0.000280
+namelookup:0.000011, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:1.043946
+namelookup:0.000017, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:1.006237
+
+================================================================================
+FINE: curl_web_test(host_name='pc1', url='http://172.16.1.22:80', times=3)
+================================================================================
+namelookup:0.000009, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:5.005797
+namelookup:0.000013, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:5.003425
+namelookup:0.000013, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:5.007789
+
+================================================================================
+FINE: curl_web_test(host_name='pc2', url='http://172.16.1.22:80', times=3)
+================================================================================
+namelookup:0.000011, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:0.000263
+namelookup:0.000010, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:1.039757
+namelookup:0.000016, connect:0.000000, appconnect:0.000000, pretransfer:0.000000, starttransfer:0.000000, total:1.060599
+
+================================================================================
+FINE: systemctl_ops(host_name='vpn_server_1', service_name="wg-quick@wg0", operation="status")
+================================================================================
+wg-quick@wg0.service - WireGuard via wg-quick(8) for wg0
+    Loaded: loaded (/usr/lib/systemd/system/wg-quick@.service, disabled)
+    Active: inactive (dead)
+
+================================================================================
+FINE: systemctl_ops(host_name='pc1', service_name="wg-quick@wg0", operation="status")
+================================================================================
+wg-quick@wg0.service - WireGuard via wg-quick(8) for wg0
+    Loaded: loaded (/usr/lib/systemd/system/wg-quick@.service, disabled)
+    Active: inactive (dead)
+
+================================================================================
+FINE: systemctl_ops(host_name='pc2', service_name="wg-quick@wg0", operation="status")
+================================================================================
+wg-quick@wg0.service - WireGuard via wg-quick(8) for wg0
+    Loaded: loaded (/usr/lib/systemd/system/wg-quick@.service, disabled)
+    Active: inactive (dead)
+
+================================================================================
+FINE: systemctl_ops(host_name='web_server_1_1', service_name="wg-quick@wg0", operation="status")
+================================================================================
+wg-quick@wg0.service - WireGuard via wg-quick(8) for wg0
+    Loaded: loaded (/usr/lib/systemd/system/wg-quick@.service, disabled)
+    Active: inactive (dead)
+
+================================================================================
+FINE: systemctl_ops(host_name='web_server_1_2', service_name="wg-quick@wg0", operation="status")
+================================================================================
+wg-quick@wg0.service - WireGuard via wg-quick(8) for wg0
+    Loaded: loaded (/usr/lib/systemd/system/wg-quick@.service, disabled)
+    Active: inactive (dead)

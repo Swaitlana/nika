@@ -1,0 +1,87 @@
+## Phase 3 — Pair 3b (underlay: silent UDP 51820 drop at gateway_router) — Restore
+## Session: 20260905-170215-4dea46
+
+## Restore commands (from documents/handtests/pair-3/pair-3b-restore.txt)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 gateway_router "iptables -D FORWARD -p udp -d 20.0.0.2 --dport 51820 -j DROP"
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 gateway_router "iptables -D FORWARD -p udp -s 20.0.0.2 --sport 51820 -j DROP"
+
+## ACL table after restore on gateway_router — clean
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 gateway_router "iptables -L FORWARD -n -v"
+Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination
+
+## Recovery was near-immediate (WireGuard retries every ~5s) — no extended wait needed, per
+## documents/handtests/pair-3/pair-3-process.txt ("if tunnel is not back within ~30s, investigate")
+
+## Pings and Curl Tests
+
+1. pc1 pings to vpn_server_1 — passes
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 3 172.16.1.1
+PING 172.16.1.1 (172.16.1.1) 56(84) bytes of data.
+64 bytes from 172.16.1.1: icmp_seq=1 ttl=64 time=0.691 ms
+64 bytes from 172.16.1.1: icmp_seq=2 ttl=64 time=2.65 ms
+64 bytes from 172.16.1.1: icmp_seq=3 ttl=64 time=2.33 ms
+
+--- 172.16.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2059ms
+rtt min/avg/max/mdev = 0.691/1.891/2.653/0.859 ms
+
+2. pc1 curl to web_server_1 — passes (200)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+200
+
+3. vpn_server_1 pings to pc1 — passes
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 ping -c 4 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+64 bytes from 172.16.1.11: icmp_seq=1 ttl=64 time=0.671 ms
+64 bytes from 172.16.1.11: icmp_seq=2 ttl=64 time=2.43 ms
+64 bytes from 172.16.1.11: icmp_seq=3 ttl=64 time=1.77 ms
+64 bytes from 172.16.1.11: icmp_seq=4 ttl=64 time=2.55 ms
+
+--- 172.16.1.11 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3023ms
+rtt min/avg/max/mdev = 0.671/1.853/2.545/0.744 ms
+
+4. pc1 pings to vpn_server_1 underlay IP address — passes (was already passing pre-restore)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 4 20.0.0.2
+PING 20.0.0.2 (20.0.0.2) 56(84) bytes of data.
+64 bytes from 20.0.0.2: icmp_seq=1 ttl=61 time=0.617 ms
+64 bytes from 20.0.0.2: icmp_seq=2 ttl=61 time=1.87 ms
+64 bytes from 20.0.0.2: icmp_seq=3 ttl=61 time=2.23 ms
+64 bytes from 20.0.0.2: icmp_seq=4 ttl=61 time=2.16 ms
+
+--- 20.0.0.2 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3072ms
+rtt min/avg/max/mdev = 0.617/1.719/2.234/0.650 ms
+
+5. pc1 pings to web_server_1 — passes
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 4 172.16.1.21
+PING 172.16.1.21 (172.16.1.21) 56(84) bytes of data.
+64 bytes from 172.16.1.21: icmp_seq=1 ttl=63 time=1.18 ms
+64 bytes from 172.16.1.21: icmp_seq=2 ttl=63 time=3.61 ms
+64 bytes from 172.16.1.21: icmp_seq=3 ttl=63 time=2.10 ms
+64 bytes from 172.16.1.21: icmp_seq=4 ttl=63 time=3.84 ms
+
+--- 172.16.1.21 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3012ms
+rtt min/avg/max/mdev = 1.175/2.681/3.842/1.096 ms
+
+6. wg show on pc1 — fresh handshake (23s)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 52250
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 23 seconds ago
+  transfer: 249.50 KiB received, 89.54 KiB sent
+
+7. Handshake timestamps after restore — pc1's row (...VV4=) advanced from 1788747516 (frozen during
+   fault) to 1788747759, proving the tunnel re-handshook successfully
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 "wg show wg0 latest-handshakes"
+WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=	1788747759
+eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=	1788747759
+1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=	1788747759

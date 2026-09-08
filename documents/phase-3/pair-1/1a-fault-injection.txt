@@ -1,0 +1,84 @@
+## Phase 3 — Pair 1a (overlay: peer removed from vpn_server_1) — Fault Injection
+## Session: 20260905-170215-4dea46
+
+## Fault injection command (from documents/handtests/pair-1/pair-1a-fault-injection.txt)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 "wg set wg0 peer 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4= remove"
+
+## Immediate check (t=0): vpn_server_1 wg show — pc1 peer gone, web-server peers intact
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:43958
+  allowed ips: 172.16.1.21/32
+  latest handshake: 4 minutes, 21 seconds ago
+  transfer: 83.32 KiB received, 10.70 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:57482
+  allowed ips: 172.16.1.22/32
+  latest handshake: 55 minutes, 14 seconds ago
+  transfer: 71.10 KiB received, 8.80 KiB sent
+
+## Immediate check (t=0): pc1 ping vpn_server_1 (172.16.1.1)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 3 172.16.1.1
+[TIMEOUT] Command 'ping -c 3 172.16.1.1' on 'pc1' exceeded 10.0s.
+
+## Waited ~2 minutes for fault fingerprint to fully set (per documents/handtests/pair-1/pair-1-process.txt)
+
+## Post-wait check: vpn_server_1 wg show
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 "wg show"
+interface: wg0
+  public key: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  private key: (hidden)
+  listening port: 51820
+
+peer: WlmcLCe6ThCHdyAtoS3yPuKnUK9WkSJxp7LFRutG72Y=
+  endpoint: 20.0.0.3:43958
+  allowed ips: 172.16.1.21/32
+  latest handshake: 6 minutes, 51 seconds ago
+  transfer: 83.32 KiB received, 10.70 KiB sent
+
+peer: eru0IX0x/rb5zuoxtEBZSSFEX7wyixmGPP0q3aNyIRs=
+  endpoint: 20.0.0.4:57482
+  allowed ips: 172.16.1.22/32
+  latest handshake: 57 minutes, 44 seconds ago
+  transfer: 71.10 KiB received, 8.80 KiB sent
+
+## Post-wait check: pc1 wg show (peer config unchanged locally, but no new handshake since fault)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "wg show"
+interface: wg0
+  public key: 1nsFyoZafBoCbR9Pedsyf2rqjvn6EtsP65wztLsvVV4=
+  private key: (hidden)
+  listening port: 52250
+
+peer: pNjUktPKMOKqq88UPy4BC1TLipjdJPM2ozWZjM8YNjA=
+  endpoint: 20.0.0.2:51820
+  allowed ips: 172.16.1.0/24
+  latest handshake: 7 minutes, 54 seconds ago
+  transfer: 154.09 KiB received, 22.59 KiB sent
+
+## Post-wait check: pc1 ping vpn_server_1 (172.16.1.1) — fails
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 3 172.16.1.1
+[TIMEOUT] Command 'ping -c 3 172.16.1.1' on 'pc1' exceeded 10.0s.
+
+## Post-wait check: pc1 ping web_server_1 (172.16.1.21) — fails
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 ping -c 3 172.16.1.21
+[TIMEOUT] Command 'ping -c 3 172.16.1.21' on 'pc1' exceeded 10.0s.
+
+## Post-wait check: pc1 curl web_server_1 — fails with 000
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 pc1 "curl -s -m 5 -o /dev/null -w '%{http_code}' http://172.16.1.21"
+000
+
+## Post-wait check: vpn_server_1 ping pc1 (172.16.1.11) — fails (expected asymmetric failure; ignore per hand-test process notes)
+(nika) uv run nika exec --session-id 20260905-170215-4dea46 vpn_server_1 ping -c 3 172.16.1.11
+PING 172.16.1.11 (172.16.1.11) 56(84) bytes of data.
+From 172.16.1.1 icmp_seq=1 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=2 Destination Host Unreachable
+From 172.16.1.1 icmp_seq=3 Destination Host Unreachable
+
+--- 172.16.1.11 ping statistics ---
+3 packets transmitted, 0 received, +3 errors, 100% packet loss, time 2083ms
